@@ -11,7 +11,11 @@ import {
   Rss, 
   Settings, 
   BookOpen,
-  HelpCircle
+  HelpCircle,
+  Shield,
+  Phone,
+  BarChart3,
+  ClipboardList
 } from 'lucide-react';
 
 export default function Sidebar({ activeView, onViewChange }) {
@@ -138,13 +142,22 @@ export default function Sidebar({ activeView, onViewChange }) {
                 className={`sidebar-link ${activeView === 'content-advisories' ? 'active' : ''}`}
                 onClick={() => onViewChange('content-advisories')}
               >
+                <AlertTriangle size={16} />
                 <span>Advisories</span>
               </div>
               <div 
-                className={`sidebar-link ${activeView === 'content-news' ? 'active' : ''}`}
-                onClick={() => onViewChange('content-news')}
+                className={`sidebar-link ${activeView === 'content-evacuation' ? 'active' : ''}`}
+                onClick={() => onViewChange('content-evacuation')}
               >
-                <span>News & Bulletins</span>
+                <Shield size={16} />
+                <span>Evacuation Centers</span>
+              </div>
+              <div 
+                className={`sidebar-link ${activeView === 'content-hotlines' ? 'active' : ''}`}
+                onClick={() => onViewChange('content-hotlines')}
+              >
+                <Phone size={16} />
+                <span>Emergency Hotlines</span>
               </div>
             </div>
           )}
@@ -166,16 +179,18 @@ export default function Sidebar({ activeView, onViewChange }) {
           {expandedGroups.system && (
             <div className="menu-group-sublist">
               <div 
-                className={`sidebar-link ${activeView === 'system-settings' ? 'active' : ''}`}
-                onClick={() => onViewChange('system-settings')}
+                className={`sidebar-link ${activeView === 'system-analytics' ? 'active' : ''}`}
+                onClick={() => onViewChange('system-analytics')}
               >
-                <span>Configuration</span>
+                <BarChart3 size={16} />
+                <span>Analytics</span>
               </div>
               <div 
                 className={`sidebar-link ${activeView === 'system-logs' ? 'active' : ''}`}
                 onClick={() => onViewChange('system-logs')}
               >
-                <span>System Logs</span>
+                <ClipboardList size={16} />
+                <span>Audit Logs</span>
               </div>
             </div>
           )}

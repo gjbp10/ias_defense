@@ -10,10 +10,13 @@ import {
   ResidentsDirectory, 
   BroadcastLogs, 
   SystemSettings, 
-  SystemLogs, 
-  Advisories, 
   Documentation 
 } from './components/Placeholders';
+import Advisories from './components/Advisories';
+import EvacuationCenters from './components/EvacuationCenters';
+import EmergencyHotlines from './components/EmergencyHotlines';
+import Analytics from './components/Analytics';
+import AuditLogs from './components/AuditLogs';
 import { 
   AdvisoryModal, 
   NotifyModal, 
@@ -21,7 +24,7 @@ import {
 } from './components/Modals';
 
 export default function App() {
-  const [activeView, setActiveView] = useState('monitoring-stations');
+  const [activeView, setActiveView] = useState('dashboard');
   
   // Modal states
   const [isAdvisoryOpen, setIsAdvisoryOpen] = useState(false);
@@ -56,16 +59,21 @@ export default function App() {
       case 'community-alerts':
         return <BroadcastLogs />;
       case 'content-advisories':
-      case 'content-news':
         return <Advisories />;
+      case 'content-evacuation':
+        return <EvacuationCenters />;
+      case 'content-hotlines':
+        return <EmergencyHotlines />;
+      case 'system-analytics':
+        return <Analytics />;
+      case 'system-logs':
+        return <AuditLogs />;
       case 'system-settings':
         return <SystemSettings />;
-      case 'system-logs':
-        return <SystemLogs />;
       case 'documentation':
         return <Documentation />;
       default:
-        return <MonitoringStations />;
+        return <Dashboard onViewChange={setActiveView} />;
     }
   };
 
