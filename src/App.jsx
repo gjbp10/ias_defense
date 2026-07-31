@@ -10,13 +10,11 @@ import {
   ResidentsDirectory, 
   BroadcastLogs, 
   SystemSettings, 
-  Documentation 
+  SystemLogs, 
+  Advisories, 
+  Documentation,
+  EmergencyHotlines
 } from './components/Placeholders';
-import Advisories from './components/Advisories';
-import EvacuationCenters from './components/EvacuationCenters';
-import EmergencyHotlines from './components/EmergencyHotlines';
-import Analytics from './components/Analytics';
-import AuditLogs from './components/AuditLogs';
 import { 
   AdvisoryModal, 
   NotifyModal, 
@@ -24,7 +22,7 @@ import {
 } from './components/Modals';
 
 export default function App() {
-  const [activeView, setActiveView] = useState('dashboard');
+  const [activeView, setActiveView] = useState('monitoring-stations');
   
   // Modal states
   const [isAdvisoryOpen, setIsAdvisoryOpen] = useState(false);
@@ -45,7 +43,7 @@ export default function App() {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard onViewChange={setActiveView} />;
+        return <Dashboard onViewChange={setActiveView} onActionClick={handleActionClick} />;
       case 'monitoring-stations':
         return <MonitoringStations />;
       case 'monitoring-river-level':
@@ -59,21 +57,18 @@ export default function App() {
       case 'community-alerts':
         return <BroadcastLogs />;
       case 'content-advisories':
+      case 'content-news':
         return <Advisories />;
-      case 'content-evacuation':
-        return <EvacuationCenters />;
       case 'content-hotlines':
         return <EmergencyHotlines />;
-      case 'system-analytics':
-        return <Analytics />;
-      case 'system-logs':
-        return <AuditLogs />;
       case 'system-settings':
         return <SystemSettings />;
+      case 'system-logs':
+        return <SystemLogs />;
       case 'documentation':
         return <Documentation />;
       default:
-        return <Dashboard onViewChange={setActiveView} />;
+        return <MonitoringStations />;
     }
   };
 
