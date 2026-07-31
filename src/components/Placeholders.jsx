@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { 
-  Users, 
-  Send, 
-  Settings, 
-  History, 
-  FileText, 
-  BookOpen, 
-  Check, 
-  Save, 
-  Sliders, 
-  Search 
+import {
+  Users,
+  Send,
+  Settings,
+  History,
+  FileText,
+  BookOpen,
+  Check,
+  Save,
+  Sliders,
+  Search,
+  Phone
 } from 'lucide-react';
 
 /* --- RESIDENTS DIRECTORY COMPONENT --- */
@@ -23,8 +24,8 @@ export function ResidentsDirectory() {
     { name: 'Emilio Jacinto', barangay: 'Tumana', role: 'Zone Leader', phone: '+63 909 567 8901' }
   ];
 
-  const filtered = residents.filter(r => 
-    r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filtered = residents.filter(r =>
+    r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.barangay.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -43,9 +44,9 @@ export function ResidentsDirectory() {
         </div>
 
         <div className="search-input-wrapper">
-          <input 
-            type="text" 
-            placeholder="Search by name or barangay..." 
+          <input
+            type="text"
+            placeholder="Search by name or barangay..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -114,8 +115,8 @@ export function BroadcastLogs() {
                   <td>{log.target}</td>
                   <td>{log.message}</td>
                   <td>
-                    <span style={{ 
-                      color: 'var(--color-online)', 
+                    <span style={{
+                      color: 'var(--color-online)',
                       backgroundColor: 'var(--color-online-bg)',
                       padding: '3px 8px',
                       borderRadius: '12px',
@@ -165,34 +166,34 @@ export function SystemSettings() {
             <Sliders size={18} style={{ color: 'var(--color-brand)' }} />
             <span>Alert Threshold Parameters</span>
           </h2>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
             <div className="form-group">
               <label className="form-label">Alert Level 1 (meters)</label>
-              <input 
-                type="number" 
-                className="form-input" 
-                value={thresholds.lvl1} 
+              <input
+                type="number"
+                className="form-input"
+                value={thresholds.lvl1}
                 onChange={(e) => setThresholds({ ...thresholds, lvl1: parseFloat(e.target.value) })}
               />
             </div>
-            
+
             <div className="form-group">
               <label className="form-label">Alert Level 2 (meters)</label>
-              <input 
-                type="number" 
-                className="form-input" 
-                value={thresholds.lvl2} 
+              <input
+                type="number"
+                className="form-input"
+                value={thresholds.lvl2}
                 onChange={(e) => setThresholds({ ...thresholds, lvl2: parseFloat(e.target.value) })}
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">Alert Level 3 (meters)</label>
-              <input 
-                type="number" 
-                className="form-input" 
-                value={thresholds.lvl3} 
+              <input
+                type="number"
+                className="form-input"
+                value={thresholds.lvl3}
                 onChange={(e) => setThresholds({ ...thresholds, lvl3: parseFloat(e.target.value) })}
               />
             </div>
@@ -209,30 +210,30 @@ export function SystemSettings() {
             <Settings size={18} style={{ color: 'var(--color-brand)' }} />
             <span>Telemetry Server Configurations</span>
           </h2>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
             <div className="form-group">
               <label className="form-label">Data Query Frequency (Minutes)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <input 
-                  type="range" 
-                  min="5" 
-                  max="60" 
-                  step="5" 
-                  value={frequency} 
+                <input
+                  type="range"
+                  min="5"
+                  max="60"
+                  step="5"
+                  value={frequency}
                   onChange={(e) => setFrequency(parseInt(e.target.value))}
                   style={{ flex: 1 }}
                 />
                 <span style={{ fontWeight: '700', fontSize: '14px', width: '50px' }}>{frequency}m</span>
               </div>
             </div>
-            
+
             <div className="form-group">
               <label className="form-label">Telemetry Receiver Webhook URL</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                value="https://api.rescuar.net/v1/telemetry/receiver" 
+              <input
+                type="text"
+                className="form-input"
+                value="https://api.rescuar.net/v1/telemetry/receiver"
                 readOnly
                 style={{ backgroundColor: '#f1f5f9', color: '#64748b' }}
               />
@@ -240,10 +241,10 @@ export function SystemSettings() {
 
             <div className="form-group">
               <label className="form-label">SMS Gateway API Key</label>
-              <input 
-                type="password" 
-                className="form-input" 
-                value="••••••••••••••••••••••••••••••••" 
+              <input
+                type="password"
+                className="form-input"
+                value="••••••••••••••••••••••••••••••••"
                 readOnly
                 style={{ backgroundColor: '#f1f5f9', color: '#64748b' }}
               />
@@ -281,15 +282,15 @@ export function SystemLogs() {
           <History size={18} style={{ color: 'var(--color-brand)' }} />
           <span>Receiver Diagnostics Console</span>
         </h2>
-        <div 
-          style={{ 
-            backgroundColor: '#0f172a', 
-            color: '#38bdf8', 
-            fontFamily: 'monospace', 
-            fontSize: '12px', 
-            padding: '20px', 
-            borderRadius: 'var(--radius-md)', 
-            maxHeight: '400px', 
+        <div
+          style={{
+            backgroundColor: '#0f172a',
+            color: '#38bdf8',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            padding: '20px',
+            borderRadius: 'var(--radius-md)',
+            maxHeight: '400px',
             overflowY: 'auto',
             textAlign: 'left',
             lineHeight: '1.6'
@@ -364,7 +365,7 @@ export function Documentation() {
           <BookOpen size={18} style={{ color: 'var(--color-brand)' }} />
           <span>Operational Protocols</span>
         </h2>
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
           <div>
             <h3 style={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: '700', marginBottom: '4px' }}>1. Water Level Reading Frequencies</h3>
@@ -388,6 +389,65 @@ export function Documentation() {
               When a station reports battery levels below 20%, immediate site dispatch is required to replace the secondary lead-acid battery cells or clean solar panel surfaces.
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --- EMERGENCY HOTLINES COMPONENT --- */
+export function EmergencyHotlines() {
+  const hotlines = [
+    { name: 'Marikina Rescue 161', category: 'General Emergency / Rescue', number: '161 / 0917-809-5141', active: true },
+    { name: 'Marikina Police Station (PNP)', category: 'Law Enforcement', number: '8646-1631', active: true },
+    { name: 'Marikina Fire Station (BFP)', category: 'Fire & Rescue', number: '8646-0427', active: true },
+    { name: 'NDRRMC / MDRRMO', category: 'Disaster Risk Management', number: '8646-2423', active: true },
+    { name: 'Philippine Red Cross - Marikina', category: 'Medical Emergency', number: '8475-1011', active: true },
+    { name: 'MERALCO (Marikina Branch)', category: 'Utility Services', number: '16211', active: true }
+  ];
+
+  return (
+    <div className="main-view">
+      <div className="view-header">
+        <div className="view-title-container">
+          <h1>Emergency Hotlines</h1>
+          <span className="view-subtitle">Official emergency contact directory for Marikina City</span>
+        </div>
+      </div>
+
+      <div className="stations-card">
+        <h2 className="stations-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Phone size={18} style={{ color: 'var(--color-brand)' }} />
+          <span>Marikina City Critical Contacts</span>
+        </h2>
+
+        <div className="table-container" style={{ marginTop: '16px' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Agency / Department</th>
+                <th>Category</th>
+                <th>Hotline Number</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hotlines.map((h, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>{h.name}</td>
+                  <td>{h.category}</td>
+                  <td style={{ fontFamily: 'monospace', fontWeight: '600', fontSize: '14px', color: 'var(--primary)' }}>{h.number}</td>
+                  <td>
+                    {h.active ? (
+                      <span style={{ backgroundColor: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }}>Active</span>
+                    ) : (
+                      <span style={{ backgroundColor: '#fef2f2', color: '#dc2626', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }}>Inactive</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
