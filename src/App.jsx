@@ -6,6 +6,7 @@ import MonitoringStations from './components/MonitoringStations';
 import RiverLevel from './components/RiverLevel';
 import InundationPrediction from './components/InundationPrediction';
 import SmsParserConsole from './components/SmsParserConsole';
+import ReportsModeration from './components/ReportsModeration';
 import { 
   ResidentsDirectory, 
   BroadcastLogs, 
@@ -50,6 +51,8 @@ export default function App() {
         return <RiverLevel onActionClick={handleActionClick} />;
       case 'monitoring-inundation':
         return <InundationPrediction />;
+      case 'community-reports-moderation':
+        return <ReportsModeration />;
       case 'community-residents':
         return <ResidentsDirectory />;
       case 'community-sms-parser':

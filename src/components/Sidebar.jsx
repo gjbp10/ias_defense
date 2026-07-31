@@ -11,7 +11,8 @@ import {
   Rss, 
   Settings, 
   BookOpen,
-  HelpCircle
+  HelpCircle,
+  Gavel
 } from 'lucide-react';
 
 export default function Sidebar({ activeView, onViewChange }) {
@@ -97,6 +98,12 @@ export default function Sidebar({ activeView, onViewChange }) {
           
           {expandedGroups.community && (
             <div className="menu-group-sublist">
+              <div 
+                className={`sidebar-link ${activeView === 'community-reports-moderation' ? 'active' : ''}`}
+                onClick={() => onViewChange('community-reports-moderation')}
+              >
+                <span>Reports Moderation</span>
+              </div>
               <div 
                 className={`sidebar-link ${activeView === 'community-residents' ? 'active' : ''}`}
                 onClick={() => onViewChange('community-residents')}
