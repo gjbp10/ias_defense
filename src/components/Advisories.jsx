@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
@@ -12,56 +12,18 @@ import {
   RefreshCw,
   Eye,
   Calendar,
+  Clock,
   MapPin,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-
-const INITIAL_ADVISORIES = [
-  {
-    id: 1,
-    title: 'Heavy Rainfall Warning',
-    category: 'Weather',
-    severity: 'High',
-    status: 'Active',
-    published: 'June 18',
-    description: 'Continuous moderate to heavy rainfall is expected within the next six hours. Localized flooding is possible in low-lying residential sectors.',
-    recommendedAction: 'Residents near low-lying river channels should secure electrical outlets and prepare emergency go-bags.',
-    durationStart: '2026-06-18T08:00',
-    durationEnd: '2026-06-18T14:00',
-    affectedAreas: 'Tumana, Nangka'
-  },
-  {
-    id: 2,
-    title: 'Flood Advisory',
-    category: 'Flood',
-    severity: 'Medium',
-    status: 'Active',
-    published: 'June 17',
-    description: 'Water level at Marikina River Sto. Niño sensor is rising steadily at 16.0m. Alert Level 2 is declared active.',
-    recommendedAction: 'Prepare for potential evacuation. LGU response teams are dispatched to emergency outposts.',
-    durationStart: '2026-06-17T09:00',
-    durationEnd: '2026-06-17T21:00',
-    affectedAreas: 'Marikina City'
-  },
-  {
-    id: 3,
-    title: 'Road Closure Notice',
-    category: 'Traffic',
-    severity: 'Low',
-    status: 'Archived',
-    published: 'June 15',
-    description: 'Sto. Niño overflow bypass road is closed temporarily to light vehicles due to minor gutter floods.',
-    recommendedAction: 'Take alternative bypass routes via Marcos Highway or C5.',
-    durationStart: '2026-06-15T12:00',
-    durationEnd: '2026-06-15T18:00',
-    affectedAreas: 'Sto. Niño Bypass'
-  }
-];
+import { supabase } from '../supabaseClient';
+import { MARIKINA_DISTRICTS } from '../constants/marikinaData';
 
 export default function Advisories() {
-  const [advisories, setAdvisories] = useState(INITIAL_ADVISORIES);
-  const [selectedId, setSelectedId] = useState(1);
+  const [advisories, setAdvisories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
@@ -76,21 +38,114 @@ export default function Advisories() {
     title: '',
     category: 'Weather',
     severity: 'Low',
-    status: 'Draft',
+    status: 'Active',
     affectedAreas: '',
     description: '',
     recommendedAction: '',
-    durationStart: '',
-    durationEnd: ''
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: ''
   });
 
-  const selectedAdvisory = advisories.find(a => a.id === selectedId);
+  const fetchAdvisories = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('advisories')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const handleRefresh = () => {
+      if (error) {
+        console.warn('Supabase fetch notice:', error.message);
+      } else if (data) {
+        const mapped = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          severity: item.severity,
+          status: item.status,
+          published: new Date(item.published_at || item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          description: item.description || '',
+          recommendedAction: item.recommended_action || '',
+          durationStart: item.duration_start || '',
+          durationEnd: item.duration_end || '',
+          affectedAreas: item.affected_areas || ''
+        }));
+        setAdvisories(mapped);
+        if (mapped.length > 0 && !selectedId) {
+          setSelectedId(mapped[0].id);
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase client error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdvisories();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('advisories-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'advisories' }, () => {
+        fetchAdvisories();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const selectedAdvisory = advisories.find(a => a.id === selectedId) || advisories[0];
+
+  const handleRefresh = async () => {
     setIsRefreshSpinning(true);
+    await fetchAdvisories();
     setTimeout(() => {
       setIsRefreshSpinning(false);
-    }, 800);
+    }, 500);
+  };
+
+  // Affected Areas helpers
+  const handleAddArea = (val) => {
+    if (!val) return;
+    
+    if (val === 'ALL_CITY') {
+      setFormState(prev => ({ ...prev, affectedAreas: 'All Marikina City' }));
+      return;
+    }
+    if (val === 'ALL_D1') {
+      const d1Areas = MARIKINA_DISTRICTS[0].barangays.join(', ');
+      setFormState(prev => ({ ...prev, affectedAreas: d1Areas }));
+      return;
+    }
+    if (val === 'ALL_D2') {
+      const d2Areas = MARIKINA_DISTRICTS[1].barangays.join(', ');
+      setFormState(prev => ({ ...prev, affectedAreas: d2Areas }));
+      return;
+    }
+
+    // Individual Barangay
+    const currentList = formState.affectedAreas 
+      ? formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean) 
+      : [];
+
+    if (!currentList.includes(val)) {
+      const newList = [...currentList, val].join(', ');
+      setFormState(prev => ({ ...prev, affectedAreas: newList }));
+    }
+  };
+
+  const handleRemoveArea = (areaToRemove) => {
+    const currentList = formState.affectedAreas 
+      ? formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean) 
+      : [];
+    const newList = currentList.filter(a => a !== areaToRemove).join(', ');
+    setFormState(prev => ({ ...prev, affectedAreas: newList }));
   };
 
   // Filter logic
@@ -123,74 +178,134 @@ export default function Advisories() {
 
   const openCreateModal = () => {
     setModalMode('create');
+    const today = new Date().toISOString().split('T')[0];
     setFormState({
       id: null,
       title: '',
       category: 'Weather',
       severity: 'Low',
-      status: 'Draft',
+      status: 'Active',
       affectedAreas: '',
       description: '',
       recommendedAction: '',
-      durationStart: '',
-      durationEnd: ''
+      startDate: today,
+      startTime: '08:00',
+      endDate: today,
+      endTime: '18:00'
     });
     setIsModalOpen(true);
   };
 
   const openEditModal = (adv) => {
     setModalMode('edit');
+    let startDate = '', startTime = '';
+    let endDate = '', endTime = '';
+
+    if (adv.durationStart) {
+      const parts = adv.durationStart.split('T');
+      startDate = parts[0] || '';
+      startTime = parts[1] ? parts[1].substring(0, 5) : '';
+    }
+    if (adv.durationEnd) {
+      const parts = adv.durationEnd.split('T');
+      endDate = parts[0] || '';
+      endTime = parts[1] ? parts[1].substring(0, 5) : '';
+    }
+
     setFormState({
-      ...adv
+      ...adv,
+      startDate,
+      startTime,
+      endDate,
+      endTime
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this advisory?')) {
-      const updated = advisories.filter(a => a.id !== id);
-      setAdvisories(updated);
-      if (selectedId === id && updated.length > 0) {
-        setSelectedId(updated[0].id);
+      const { error } = await supabase.from('advisories').delete().eq('id', id);
+      if (error) {
+        alert('Could not delete: ' + error.message);
+      } else {
+        fetchAdvisories();
       }
     }
   };
 
-  const handleArchive = (id) => {
-    setAdvisories(prev => prev.map(a => {
-      if (a.id === id) {
-        return { ...a, status: a.status === 'Archived' ? 'Active' : 'Archived' };
-      }
-      return a;
-    }));
-  };
+  const handleArchive = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'Archived' ? 'Active' : 'Archived';
+    const { error } = await supabase
+      .from('advisories')
+      .update({ status: newStatus })
+      .eq('id', id);
 
-  const handleDuplicate = (adv) => {
-    const newId = Math.max(...advisories.map(a => a.id), 0) + 1;
-    const duplicated = {
-      ...adv,
-      id: newId,
-      title: `${adv.title} (Copy)`,
-      published: 'Today',
-      status: 'Draft'
-    };
-    setAdvisories(prev => [...prev, duplicated]);
-    setSelectedId(newId);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (modalMode === 'create') {
-      const newId = Math.max(...advisories.map(a => a.id), 0) + 1;
-      const newAdvisory = {
-        ...formState,
-        id: newId,
-        published: 'Just now'
-      };
-      setAdvisories(prev => [...prev, newAdvisory]);
-      setSelectedId(newId);
+    if (error) {
+      alert('Could not update status: ' + error.message);
     } else {
-      setAdvisories(prev => prev.map(a => a.id === formState.id ? formState : a));
+      fetchAdvisories();
+    }
+  };
+
+  const handleDuplicate = async (adv) => {
+    const payload = {
+      title: `${adv.title} (Copy)`,
+      category: adv.category,
+      severity: adv.severity,
+      status: 'Active',
+      description: adv.description,
+      recommended_action: adv.recommendedAction,
+      affected_areas: adv.affectedAreas
+    };
+
+    const { error } = await supabase.from('advisories').insert([payload]);
+    if (error) {
+      alert('Could not duplicate advisory: ' + error.message);
+    } else {
+      fetchAdvisories();
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const durationStart = (formState.startDate && formState.startTime) 
+      ? `${formState.startDate}T${formState.startTime}:00` 
+      : formState.startDate 
+        ? `${formState.startDate}T00:00:00` 
+        : null;
+
+    const durationEnd = (formState.endDate && formState.endTime) 
+      ? `${formState.endDate}T${formState.endTime}:00` 
+      : formState.endDate 
+        ? `${formState.endDate}T23:59:59` 
+        : null;
+
+    const payload = {
+      title: formState.title,
+      category: formState.category,
+      severity: formState.severity,
+      status: formState.status,
+      description: formState.description,
+      recommended_action: formState.recommendedAction,
+      affected_areas: formState.affectedAreas,
+      duration_start: durationStart,
+      duration_end: durationEnd
+    };
+
+    if (modalMode === 'create') {
+      const { error } = await supabase.from('advisories').insert([payload]);
+      if (error) {
+        alert('Error publishing to Supabase: ' + error.message);
+      } else {
+        await fetchAdvisories();
+      }
+    } else {
+      const { error } = await supabase.from('advisories').update(payload).eq('id', formState.id);
+      if (error) {
+        alert('Error updating in Supabase: ' + error.message);
+      } else {
+        await fetchAdvisories();
+      }
     }
     setIsModalOpen(false);
   };
@@ -201,7 +316,7 @@ export default function Advisories() {
       <div className="view-header">
         <div className="view-title-container">
           <h1>Advisories</h1>
-          <span className="view-subtitle">Last updated: June 18, 2026 • 08:42 AM</span>
+          <span className="view-subtitle">Connected to Supabase • Live Public Emergency Broadcasting</span>
         </div>
         <button className="btn-refresh" onClick={handleRefresh}>
           <RefreshCw size={13} className={isRefreshSpinning ? 'spin-icon' : ''} />
@@ -283,10 +398,16 @@ export default function Advisories() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAdvisories.length === 0 ? (
+                {loading ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-light)' }}>
-                      No advisories match your filters.
+                      Loading live advisories from Supabase...
+                    </td>
+                  </tr>
+                ) : filteredAdvisories.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-light)' }}>
+                      No advisories in database yet. Click <strong>"+ Publish an Advisory"</strong> to create one!
                     </td>
                   </tr>
                 ) : (
@@ -296,7 +417,7 @@ export default function Advisories() {
                     return (
                       <tr 
                         key={adv.id} 
-                        className={selectedId === adv.id ? 'selected' : ''}
+                        className={selectedAdvisory?.id === adv.id ? 'selected' : ''}
                         onClick={() => setSelectedId(adv.id)}
                       >
                         <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>{adv.title}</td>
@@ -350,7 +471,7 @@ export default function Advisories() {
           {!selectedAdvisory ? (
             <div className="details-empty-state">
               <Eye size={32} style={{ color: 'var(--text-light)', marginBottom: '8px' }} />
-              <p>Select an advisory first to view details.</p>
+              <p>Select an advisory or publish a new one to view details.</p>
             </div>
           ) : (
             <div className="details-content">
@@ -404,7 +525,7 @@ export default function Advisories() {
                   <span className="detail-label">Affected Area Sectors</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', marginTop: '2px' }}>
                     <MapPin size={12} style={{ color: 'var(--color-brand)' }} />
-                    <span>{selectedAdvisory.affectedAreas}</span>
+                    <span>{selectedAdvisory.affectedAreas || 'N/A'}</span>
                   </div>
                 </div>
 
@@ -433,7 +554,7 @@ export default function Advisories() {
                   </button>
                   <button 
                     className="action-row-btn"
-                    onClick={() => handleArchive(selectedAdvisory.id)}
+                    onClick={() => handleArchive(selectedAdvisory.id, selectedAdvisory.status)}
                     style={{ justifyContent: 'center', gap: '8px' }}
                   >
                     <Archive size={14} />
@@ -479,7 +600,7 @@ export default function Advisories() {
       {/* Slide-over / Modal for Create/Edit */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-container" style={{ width: '450px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-container" style={{ width: '520px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">{modalMode === 'create' ? 'Create Advisory' : 'Edit Advisory'}</span>
               <button className="btn-close-modal" onClick={() => setIsModalOpen(false)}>
@@ -534,15 +655,72 @@ export default function Advisories() {
                   </div>
                 </div>
 
+                {/* District Grouped Barangays Selector */}
                 <div className="form-group">
-                  <label className="form-label">Affected Areas</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="Affected Areas in the advisory.." 
-                    value={formState.affectedAreas} 
-                    onChange={(e) => setFormState({ ...formState, affectedAreas: e.target.value })}
-                  />
+                  <label className="form-label">Affected Areas (Marikina Barangays by District)</label>
+                  
+                  {/* Selected Chips */}
+                  {formState.affectedAreas && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                      {formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean).map((area, idx) => (
+                        <span 
+                          key={idx} 
+                          style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '6px', 
+                            backgroundColor: '#e0f2fe', 
+                            color: '#0369a1', 
+                            fontSize: '12px', 
+                            fontWeight: '600', 
+                            padding: '4px 10px', 
+                            borderRadius: '16px',
+                            border: '1px solid #bae6fd'
+                          }}
+                        >
+                          {area}
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveArea(area)} 
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#0369a1' }}
+                          >
+                            <X size={13} />
+                          </button>
+                        </span>
+                      ))}
+                      <button 
+                        type="button" 
+                        onClick={() => setFormState({ ...formState, affectedAreas: '' })}
+                        style={{ border: 'none', background: 'none', color: '#dc2626', fontSize: '11px', cursor: 'pointer', marginLeft: '4px', textDecoration: 'underline' }}
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
+
+                  <select 
+                    className="form-input"
+                    value=""
+                    onChange={(e) => handleAddArea(e.target.value)}
+                    style={{ backgroundColor: 'white', cursor: 'pointer' }}
+                  >
+                    <option value="" disabled>+ Add Barangay or District...</option>
+                    <option value="ALL_CITY">📍 All Marikina City</option>
+                    <option value="ALL_D1">🏢 All District 1 Barangays</option>
+                    <option value="ALL_D2">🏢 All District 2 Barangays</option>
+
+                    <optgroup label="District 1">
+                      {MARIKINA_DISTRICTS[0].barangays.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </optgroup>
+
+                    <optgroup label="District 2">
+                      {MARIKINA_DISTRICTS[1].barangays.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -555,7 +733,6 @@ export default function Advisories() {
                     onChange={(e) => setFormState({ ...formState, description: e.target.value })}
                     required
                   />
-                  <span style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '2px' }}>Example: Continuous moderate to heavy rainfall is expected...</span>
                 </div>
 
                 <div className="form-group">
@@ -567,27 +744,54 @@ export default function Advisories() {
                     value={formState.recommendedAction}
                     onChange={(e) => setFormState({ ...formState, recommendedAction: e.target.value })}
                   />
-                  <span style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '2px' }}>Example: Residents near low-lying areas should prepare...</span>
                 </div>
 
+                {/* Separate Duration Start Date and Time */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Duration Start Date</label>
                     <input 
-                      type="datetime-local" 
+                      type="date" 
                       className="form-input" 
-                      value={formState.durationStart}
-                      onChange={(e) => setFormState({ ...formState, durationStart: e.target.value })}
+                      value={formState.startDate}
+                      onChange={(e) => setFormState({ ...formState, startDate: e.target.value })}
+                      style={{ backgroundColor: 'white' }}
                     />
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label">Start Time</label>
+                    <input 
+                      type="time" 
+                      className="form-input" 
+                      value={formState.startTime}
+                      onChange={(e) => setFormState({ ...formState, startTime: e.target.value })}
+                      style={{ backgroundColor: 'white' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Separate Duration End Date and Time */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
                     <label className="form-label">Duration End Date</label>
                     <input 
-                      type="datetime-local" 
+                      type="date" 
                       className="form-input" 
-                      value={formState.durationEnd}
-                      onChange={(e) => setFormState({ ...formState, durationEnd: e.target.value })}
+                      value={formState.endDate}
+                      onChange={(e) => setFormState({ ...formState, endDate: e.target.value })}
+                      style={{ backgroundColor: 'white' }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">End Time</label>
+                    <input 
+                      type="time" 
+                      className="form-input" 
+                      value={formState.endTime}
+                      onChange={(e) => setFormState({ ...formState, endTime: e.target.value })}
+                      style={{ backgroundColor: 'white' }}
                     />
                   </div>
                 </div>
@@ -600,8 +804,8 @@ export default function Advisories() {
                     onChange={(e) => setFormState({ ...formState, status: e.target.value })}
                     style={{ backgroundColor: 'white' }}
                   >
-                    <option value="Draft">Draft</option>
                     <option value="Active">Active</option>
+                    <option value="Draft">Draft</option>
                     <option value="Archived">Archived</option>
                   </select>
                 </div>
