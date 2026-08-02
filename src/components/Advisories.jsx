@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Archive, 
-  Copy, 
-  X, 
-  Check, 
+import {
+  Search,
+  Plus,
+  Trash2,
+  Edit3,
+  Archive,
+  Copy,
+  X,
+  Check,
   AlertTriangle,
   RefreshCw,
   Eye,
@@ -113,7 +113,7 @@ export default function Advisories() {
   // Affected Areas helpers
   const handleAddArea = (val) => {
     if (!val) return;
-    
+
     if (val === 'ALL_CITY') {
       setFormState(prev => ({ ...prev, affectedAreas: 'All Marikina City' }));
       return;
@@ -130,8 +130,8 @@ export default function Advisories() {
     }
 
     // Individual Barangay
-    const currentList = formState.affectedAreas 
-      ? formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean) 
+    const currentList = formState.affectedAreas
+      ? formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean)
       : [];
 
     if (!currentList.includes(val)) {
@@ -141,8 +141,8 @@ export default function Advisories() {
   };
 
   const handleRemoveArea = (areaToRemove) => {
-    const currentList = formState.affectedAreas 
-      ? formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean) 
+    const currentList = formState.affectedAreas
+      ? formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean)
       : [];
     const newList = currentList.filter(a => a !== areaToRemove).join(', ');
     setFormState(prev => ({ ...prev, affectedAreas: newList }));
@@ -150,8 +150,8 @@ export default function Advisories() {
 
   // Filter logic
   const filteredAdvisories = advisories.filter(adv => {
-    const matchesSearch = adv.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          adv.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      adv.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter ? adv.category === categoryFilter : true;
     const matchesSeverity = severityFilter ? adv.severity === severityFilter : true;
     const matchesStatus = statusFilter ? adv.status === statusFilter : true;
@@ -268,16 +268,16 @@ export default function Advisories() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const durationStart = (formState.startDate && formState.startTime) 
-      ? `${formState.startDate}T${formState.startTime}:00` 
-      : formState.startDate 
-        ? `${formState.startDate}T00:00:00` 
+    const durationStart = (formState.startDate && formState.startTime)
+      ? `${formState.startDate}T${formState.startTime}:00`
+      : formState.startDate
+        ? `${formState.startDate}T00:00:00`
         : null;
 
-    const durationEnd = (formState.endDate && formState.endTime) 
-      ? `${formState.endDate}T${formState.endTime}:00` 
-      : formState.endDate 
-        ? `${formState.endDate}T23:59:59` 
+    const durationEnd = (formState.endDate && formState.endTime)
+      ? `${formState.endDate}T${formState.endTime}:00`
+      : formState.endDate
+        ? `${formState.endDate}T23:59:59`
         : null;
 
     const payload = {
@@ -325,7 +325,7 @@ export default function Advisories() {
       </div>
 
       <div className="stations-split-layout">
-        
+
         {/* Left Side: Advisories List */}
         <div className="stations-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -339,15 +339,15 @@ export default function Advisories() {
           {/* Search and Filters */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <div className="search-input-wrapper" style={{ flex: 1, minWidth: '200px' }}>
-              <input 
-                type="text" 
-                placeholder="Search for an advisory.." 
+              <input
+                type="text"
+                placeholder="Search for an advisory.."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            
-            <select 
+
+            <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="time-range-select"
@@ -360,7 +360,7 @@ export default function Advisories() {
               <option value="Health">Health</option>
             </select>
 
-            <select 
+            <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
               className="time-range-select"
@@ -372,7 +372,7 @@ export default function Advisories() {
               <option value="Low">Low</option>
             </select>
 
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="time-range-select"
@@ -415,33 +415,33 @@ export default function Advisories() {
                     const sevStyle = getSeverityColor(adv.severity);
                     const statusStyle = getStatusColor(adv.status);
                     return (
-                      <tr 
-                        key={adv.id} 
+                      <tr
+                        key={adv.id}
                         className={selectedAdvisory?.id === adv.id ? 'selected' : ''}
                         onClick={() => setSelectedId(adv.id)}
                       >
                         <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>{adv.title}</td>
                         <td>{adv.category}</td>
                         <td>
-                          <span style={{ 
-                            color: sevStyle.color, 
-                            backgroundColor: sevStyle.bg, 
-                            padding: '3px 8px', 
-                            borderRadius: '12px', 
-                            fontSize: '11px', 
-                            fontWeight: '700' 
+                          <span style={{
+                            color: sevStyle.color,
+                            backgroundColor: sevStyle.bg,
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '700'
                           }}>
                             {adv.severity}
                           </span>
                         </td>
                         <td>
-                          <span style={{ 
-                            color: statusStyle.color, 
-                            backgroundColor: statusStyle.bg, 
-                            padding: '3px 8px', 
-                            borderRadius: '12px', 
-                            fontSize: '11px', 
-                            fontWeight: '700' 
+                          <span style={{
+                            color: statusStyle.color,
+                            backgroundColor: statusStyle.bg,
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '700'
                           }}>
                             {adv.status}
                           </span>
@@ -478,23 +478,23 @@ export default function Advisories() {
               <div className="details-header">
                 <span className="details-station-name">{selectedAdvisory.title}</span>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <span style={{ 
-                    color: getSeverityColor(selectedAdvisory.severity).color, 
-                    backgroundColor: getSeverityColor(selectedAdvisory.severity).bg, 
-                    padding: '3px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '11px', 
-                    fontWeight: '700' 
+                  <span style={{
+                    color: getSeverityColor(selectedAdvisory.severity).color,
+                    backgroundColor: getSeverityColor(selectedAdvisory.severity).bg,
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: '700'
                   }}>
                     {selectedAdvisory.severity} Severity
                   </span>
-                  <span style={{ 
-                    color: getStatusColor(selectedAdvisory.status).color, 
-                    backgroundColor: getStatusColor(selectedAdvisory.status).bg, 
-                    padding: '3px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '11px', 
-                    fontWeight: '700' 
+                  <span style={{
+                    color: getStatusColor(selectedAdvisory.status).color,
+                    backgroundColor: getStatusColor(selectedAdvisory.status).bg,
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: '700'
                   }}>
                     {selectedAdvisory.status}
                   </span>
@@ -544,7 +544,7 @@ export default function Advisories() {
               {/* Action Buttons Panel */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <button 
+                  <button
                     className="action-row-btn"
                     onClick={() => openEditModal(selectedAdvisory)}
                     style={{ justifyContent: 'center', gap: '8px' }}
@@ -552,7 +552,7 @@ export default function Advisories() {
                     <Edit3 size={14} />
                     <span>Edit</span>
                   </button>
-                  <button 
+                  <button
                     className="action-row-btn"
                     onClick={() => handleArchive(selectedAdvisory.id, selectedAdvisory.status)}
                     style={{ justifyContent: 'center', gap: '8px' }}
@@ -561,31 +561,31 @@ export default function Advisories() {
                     <span>{selectedAdvisory.status === 'Archived' ? 'Activate' : 'Archive'}</span>
                   </button>
                 </div>
-                
-                <button 
+
+                <button
                   className="action-row-btn"
                   onClick={() => handleDuplicate(selectedAdvisory)}
-                  style={{ 
-                    justifyContent: 'center', 
-                    gap: '8px', 
-                    backgroundColor: '#e0f2fe', 
-                    borderColor: '#bae6fd', 
-                    color: '#0369a1' 
+                  style={{
+                    justifyContent: 'center',
+                    gap: '8px',
+                    backgroundColor: '#e0f2fe',
+                    borderColor: '#bae6fd',
+                    color: '#0369a1'
                   }}
                 >
                   <Copy size={14} />
                   <span>Duplicate</span>
                 </button>
 
-                <button 
+                <button
                   className="action-row-btn"
                   onClick={() => handleDelete(selectedAdvisory.id)}
-                  style={{ 
-                    justifyContent: 'center', 
-                    gap: '8px', 
-                    backgroundColor: '#fef2f2', 
-                    borderColor: '#fca5a5', 
-                    color: '#dc2626' 
+                  style={{
+                    justifyContent: 'center',
+                    gap: '8px',
+                    backgroundColor: '#fef2f2',
+                    borderColor: '#fca5a5',
+                    color: '#dc2626'
                   }}
                 >
                   <Trash2 size={14} />
@@ -610,14 +610,14 @@ export default function Advisories() {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
-                
+
                 <div className="form-group">
                   <label className="form-label">Title</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="Advisory Title.." 
-                    value={formState.title} 
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Advisory Title.."
+                    value={formState.title}
                     onChange={(e) => setFormState({ ...formState, title: e.target.value })}
                     required
                   />
@@ -627,7 +627,7 @@ export default function Advisories() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Category</label>
-                    <select 
+                    <select
                       className="form-input"
                       value={formState.category}
                       onChange={(e) => setFormState({ ...formState, category: e.target.value })}
@@ -642,7 +642,7 @@ export default function Advisories() {
 
                   <div className="form-group">
                     <label className="form-label">Severity</label>
-                    <select 
+                    <select
                       className="form-input"
                       value={formState.severity}
                       onChange={(e) => setFormState({ ...formState, severity: e.target.value })}
@@ -658,38 +658,38 @@ export default function Advisories() {
                 {/* District Grouped Barangays Selector */}
                 <div className="form-group">
                   <label className="form-label">Affected Areas (Marikina Barangays by District)</label>
-                  
+
                   {/* Selected Chips */}
                   {formState.affectedAreas && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                       {formState.affectedAreas.split(',').map(s => s.trim()).filter(Boolean).map((area, idx) => (
-                        <span 
-                          key={idx} 
-                          style={{ 
-                            display: 'inline-flex', 
-                            alignItems: 'center', 
-                            gap: '6px', 
-                            backgroundColor: '#e0f2fe', 
-                            color: '#0369a1', 
-                            fontSize: '12px', 
-                            fontWeight: '600', 
-                            padding: '4px 10px', 
+                        <span
+                          key={idx}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            backgroundColor: '#e0f2fe',
+                            color: '#0369a1',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            padding: '4px 10px',
                             borderRadius: '16px',
                             border: '1px solid #bae6fd'
                           }}
                         >
                           {area}
-                          <button 
-                            type="button" 
-                            onClick={() => handleRemoveArea(area)} 
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveArea(area)}
                             style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#0369a1' }}
                           >
                             <X size={13} />
                           </button>
                         </span>
                       ))}
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setFormState({ ...formState, affectedAreas: '' })}
                         style={{ border: 'none', background: 'none', color: '#dc2626', fontSize: '11px', cursor: 'pointer', marginLeft: '4px', textDecoration: 'underline' }}
                       >
@@ -698,7 +698,7 @@ export default function Advisories() {
                     </div>
                   )}
 
-                  <select 
+                  <select
                     className="form-input"
                     value=""
                     onChange={(e) => handleAddArea(e.target.value)}
@@ -725,8 +725,8 @@ export default function Advisories() {
 
                 <div className="form-group">
                   <label className="form-label">Description</label>
-                  <textarea 
-                    className="form-textarea" 
+                  <textarea
+                    className="form-textarea"
                     rows="3"
                     placeholder="Advisory description..."
                     value={formState.description}
@@ -737,8 +737,8 @@ export default function Advisories() {
 
                 <div className="form-group">
                   <label className="form-label">Recommended Action</label>
-                  <textarea 
-                    className="form-textarea" 
+                  <textarea
+                    className="form-textarea"
                     rows="3"
                     placeholder="Advisory action recommendations..."
                     value={formState.recommendedAction}
@@ -750,9 +750,9 @@ export default function Advisories() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Duration Start Date</label>
-                    <input 
-                      type="date" 
-                      className="form-input" 
+                    <input
+                      type="date"
+                      className="form-input"
                       value={formState.startDate}
                       onChange={(e) => setFormState({ ...formState, startDate: e.target.value })}
                       style={{ backgroundColor: 'white' }}
@@ -761,9 +761,9 @@ export default function Advisories() {
 
                   <div className="form-group">
                     <label className="form-label">Start Time</label>
-                    <input 
-                      type="time" 
-                      className="form-input" 
+                    <input
+                      type="time"
+                      className="form-input"
                       value={formState.startTime}
                       onChange={(e) => setFormState({ ...formState, startTime: e.target.value })}
                       style={{ backgroundColor: 'white' }}
@@ -775,9 +775,9 @@ export default function Advisories() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-group">
                     <label className="form-label">Duration End Date</label>
-                    <input 
-                      type="date" 
-                      className="form-input" 
+                    <input
+                      type="date"
+                      className="form-input"
                       value={formState.endDate}
                       onChange={(e) => setFormState({ ...formState, endDate: e.target.value })}
                       style={{ backgroundColor: 'white' }}
@@ -786,9 +786,9 @@ export default function Advisories() {
 
                   <div className="form-group">
                     <label className="form-label">End Time</label>
-                    <input 
-                      type="time" 
-                      className="form-input" 
+                    <input
+                      type="time"
+                      className="form-input"
                       value={formState.endTime}
                       onChange={(e) => setFormState({ ...formState, endTime: e.target.value })}
                       style={{ backgroundColor: 'white' }}
@@ -798,7 +798,7 @@ export default function Advisories() {
 
                 <div className="form-group">
                   <label className="form-label">Status</label>
-                  <select 
+                  <select
                     className="form-input"
                     value={formState.status}
                     onChange={(e) => setFormState({ ...formState, status: e.target.value })}
