@@ -7,12 +7,12 @@ import RiverLevel from './components/RiverLevel';
 import InundationPrediction from './components/InundationPrediction';
 import SmsParserConsole from './components/SmsParserConsole';
 import ReportsModeration from './components/ReportsModeration';
+import Advisories from './components/Advisories';
 import { 
   ResidentsDirectory, 
   BroadcastLogs, 
   SystemSettings, 
   SystemLogs, 
-  Advisories, 
   Documentation,
   EmergencyHotlines
 } from './components/Placeholders';
