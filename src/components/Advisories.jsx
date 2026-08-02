@@ -18,7 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { MARIKINA_DISTRICTS } from '../constants/marikinaData';
+import { MARIKINA_DISTRICTS } from '../constants/marikinaData.js';
 
 export default function Advisories() {
   const [advisories, setAdvisories] = useState([]);
