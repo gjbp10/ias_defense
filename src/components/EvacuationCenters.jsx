@@ -1,394 +1,331 @@
 import React, { useState } from 'react';
 import { 
-  Search, 
-  MapPin, 
+  Shield, 
   Users, 
-  Check, 
-  Building2, 
+  MapPin, 
   Phone, 
-  ChevronLeft, 
-  ChevronRight,
-  Shield,
-  ShieldAlert,
+  Plus, 
+  Search, 
+  Filter, 
+  CheckCircle2, 
+  AlertTriangle,
   RefreshCw,
-  Zap,
-  Coffee,
-  Heart,
-  Droplet
+  Edit,
+  X
 } from 'lucide-react';
 
-const INITIAL_CENTERS = [
-  {
-    id: 1,
-    name: 'Malanday Elementary School',
-    status: 'Open',
-    capacity: 500,
-    occupancy: 320,
-    barangay: 'Malanday',
-    manager: 'Kagawad Juan Dela Cruz',
-    contact: '0917-123-4567',
-    amenities: ['First Aid Clinic', 'Mobile Kitchen', 'Washrooms', 'Power Charging Outlets']
-  },
-  {
-    id: 2,
-    name: 'Nangka High School',
-    status: 'Open',
-    capacity: 300,
-    occupancy: 215,
-    barangay: 'Nangka',
-    manager: 'Maria Santos',
-    contact: '0918-234-5678',
-    amenities: ['First Aid Clinic', 'Water Station', 'Washrooms']
-  },
-  {
-    id: 3,
-    name: 'Marikina Sports Center',
-    status: 'Full',
-    capacity: 1000,
-    occupancy: 1000,
-    barangay: 'Sto. Niño',
-    manager: 'LGU CDCC Team',
-    contact: '0920-345-6789',
-    amenities: ['First Aid Clinic', 'Mobile Kitchen', 'Washrooms', 'Backup Generator', 'Sleeping Mats']
-  }
-];
-
 export default function EvacuationCenters() {
-  const [centers, setCenters] = useState(INITIAL_CENTERS);
-  const [selectedId, setSelectedId] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [barangayFilter, setBarangayFilter] = useState('');
-  const [isRefreshSpinning, setIsRefreshSpinning] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Simulation state
-  const [addOccupantsNum, setAddOccupantsNum] = useState('');
+  const [centers, setCenters] = useState([
+    {
+      id: 1,
+      name: 'Malanday Elementary School',
+      barangay: 'Malanday',
+      capacity: 1200,
+      currentEvacuees: 450,
+      status: 'Open',
+      headOfficer: 'Captain Roberto Santos',
+      contact: '0917-555-0192',
+      facilities: ['Medical Station', 'Clean Water', 'Generator', 'Modular Tents']
+    },
+    {
+      id: 2,
+      name: 'Tumana Evacuation Center',
+      barangay: 'Tumana',
+      capacity: 1500,
+      currentEvacuees: 980,
+      status: 'Open',
+      headOfficer: 'Elena Cruz (LGU Coordinator)',
+      contact: '0918-444-9120',
+      facilities: ['Medical Station', 'Kitchen Area', 'Clean Water', 'Child-Friendly Space']
+    },
+    {
+      id: 3,
+      name: 'Nangka Elementary School',
+      barangay: 'Nangka',
+      capacity: 1000,
+      currentEvacuees: 310,
+      status: 'Open',
+      headOfficer: 'Kagawad Manuel Reyes',
+      contact: '0920-333-8101',
+      facilities: ['Clean Water', 'Generator', 'Restrooms']
+    },
+    {
+      id: 4,
+      name: 'Provident Multipurpose Hall',
+      barangay: 'Provident',
+      capacity: 600,
+      currentEvacuees: 0,
+      status: 'Standby',
+      headOfficer: 'Maria Gonzales',
+      contact: '0915-222-7711',
+      facilities: ['Generator', 'Restrooms', 'Parking']
+    },
+    {
+      id: 5,
+      name: 'Marikina Sports Center',
+      barangay: 'Sto. Niño',
+      capacity: 3500,
+      currentEvacuees: 0,
+      status: 'Standby',
+      headOfficer: 'MDRRMO Relief Team Alpha',
+      contact: '0917-809-5141',
+      facilities: ['Major Relief Hub', 'Medical Station', 'Helipad', 'Full Kitchen']
+    }
+  ]);
 
-  const selectedCenter = centers.find(c => c.id === selectedId);
-
-  const handleRefresh = () => {
-    setIsRefreshSpinning(true);
-    setTimeout(() => {
-      setIsRefreshSpinning(false);
-    }, 800);
-  };
-
-  const handleAddOccupants = (e) => {
-    e.preventDefault();
-    if (!addOccupantsNum || isNaN(addOccupantsNum)) return;
-    const num = parseInt(addOccupantsNum);
-    
-    setCenters(prev => prev.map(c => {
-      if (c.id === selectedId) {
-        const newOcc = Math.min(c.capacity, Math.max(0, c.occupancy + num));
-        return {
-          ...c,
-          occupancy: newOcc,
-          status: newOcc >= c.capacity ? 'Full' : 'Open'
-        };
-      }
-      return c;
-    }));
-    setAddOccupantsNum('');
-  };
-
-  const handleToggleStatus = () => {
-    setCenters(prev => prev.map(c => {
-      if (c.id === selectedId) {
-        const nextStatus = c.status === 'Open' ? 'Full' : 'Open';
-        return {
-          ...c,
-          status: nextStatus,
-          occupancy: nextStatus === 'Full' ? c.capacity : c.occupancy
-        };
-      }
-      return c;
-    }));
-  };
-
-  const filteredCenters = centers.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.barangay.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? c.status === statusFilter : true;
-    const matchesBarangay = barangayFilter ? c.barangay === barangayFilter : true;
-    return matchesSearch && matchesStatus && matchesBarangay;
+  const [formData, setFormData] = useState({
+    name: '',
+    barangay: '',
+    capacity: '',
+    headOfficer: '',
+    contact: ''
   });
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Open': return { color: '#16a34a', bg: '#f0fdf4' };
-      case 'Full': return { color: '#dc2626', bg: '#fef2f2' };
-      default: return { color: '#4b5563', bg: '#f3f4f6' };
+  const filteredCenters = centers.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.barangay.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter ? c.status === statusFilter : true;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleAddCenter = () => {
+    if (!formData.name || !formData.barangay) return;
+    const newCenter = {
+      id: Date.now(),
+      name: formData.name,
+      barangay: formData.barangay,
+      capacity: parseInt(formData.capacity) || 500,
+      currentEvacuees: 0,
+      status: 'Standby',
+      headOfficer: formData.headOfficer || 'Unassigned',
+      contact: formData.contact || 'N/A',
+      facilities: ['Clean Water', 'Restrooms']
+    };
+    setCenters([...centers, newCenter]);
+    setIsDrawerOpen(false);
+    setFormData({ name: '', barangay: '', capacity: '', headOfficer: '', contact: '' });
+  };
+
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'Open':
+        return { bg: '#ecfdf5', color: '#059669', label: 'Active Open' };
+      case 'Standby':
+        return { bg: '#eff6ff', color: '#3b82f6', label: 'Standby Ready' };
+      case 'Full':
+        return { bg: '#fef2f2', color: '#dc2626', label: 'At Max Capacity' };
+      default:
+        return { bg: '#f1f5f9', color: '#64748b', label: status };
     }
   };
 
-  const getOccupancyPercent = (occ, cap) => {
-    return Math.round((occ / cap) * 100);
-  };
-
-  const getProgressBarColor = (percent) => {
-    if (percent >= 100) return '#dc2626'; // Red
-    if (percent >= 80) return '#ea580c';  // Orange
-    return '#16a34a';                     // Green
-  };
-
-  const getAmenityIcon = (name) => {
-    const n = name.toLowerCase();
-    if (n.includes('clinic') || n.includes('aid')) return <Heart size={14} style={{ color: '#dc2626' }} />;
-    if (n.includes('kitchen') || n.includes('food')) return <Coffee size={14} style={{ color: '#854d0e' }} />;
-    if (n.includes('water')) return <Droplet size={14} style={{ color: '#0284c7' }} />;
-    if (n.includes('generator') || n.includes('power')) return <Zap size={14} style={{ color: '#eab308' }} />;
-    return <Check size={14} style={{ color: '#16a34a' }} />;
-  };
-
   return (
-    <div className="main-view">
-      {/* View Header */}
-      <div className="view-header">
-        <div className="view-title-container">
-          <h1>Evacuation Centers</h1>
-          <span className="view-subtitle">Last updated: June 18, 2026 • 08:42 AM</span>
+    <div className="main-view" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '24px' }}>
+      
+      {/* HEADER SECTION */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+            Evacuation Centers
+          </h1>
+          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+            Monitor shelter capacity, occupancy rates, and assigned LGU relief officers across Marikina
+          </span>
         </div>
-        <button className="btn-refresh" onClick={handleRefresh}>
-          <RefreshCw size={13} className={isRefreshSpinning ? 'spin-icon' : ''} />
-          <span>Refresh</span>
+
+        <button 
+          onClick={() => setIsDrawerOpen(true)}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            padding: '10px 18px',
+            backgroundColor: '#0d9488',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '13px',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(13, 148, 136, 0.2)'
+          }}
+        >
+          <Plus size={16} /> Add Evacuation Center
         </button>
       </div>
 
-      <div className="stations-split-layout">
-
-        {/* Left Side: Evacuation Centers List */}
-        <div className="stations-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="stations-card-title">List of Evacuation Centers</h2>
-          </div>
-
-          {/* Search & Filters */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div className="search-input-wrapper" style={{ flex: 1, minWidth: '200px' }}>
-              <input 
-                type="text" 
-                placeholder="Search for an evacuation center..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="time-range-select"
-              style={{ padding: '10px 14px', borderRadius: '10px', width: '130px', fontSize: '13px' }}
-            >
-              <option value="">Status...</option>
-              <option value="Open">Open</option>
-              <option value="Full">Full</option>
-            </select>
-
-            <select 
-              value={barangayFilter}
-              onChange={(e) => setBarangayFilter(e.target.value)}
-              className="time-range-select"
-              style={{ padding: '10px 14px', borderRadius: '10px', width: '130px', fontSize: '13px' }}
-            >
-              <option value="">Barangay...</option>
-              <option value="Malanday">Malanday</option>
-              <option value="Nangka">Nangka</option>
-              <option value="Sto. Niño">Sto. Niño</option>
-            </select>
-          </div>
-
-          {/* Evacuation Centers Table */}
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Center</th>
-                  <th>Status</th>
-                  <th>Capacity</th>
-                  <th>Occupancy</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCenters.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-light)' }}>
-                      No evacuation centers found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredCenters.map((c) => {
-                    const statusStyle = getStatusColor(c.status);
-                    return (
-                      <tr 
-                        key={c.id} 
-                        className={selectedId === c.id ? 'selected' : ''}
-                        onClick={() => setSelectedId(c.id)}
-                      >
-                        <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>{c.name}</td>
-                        <td>
-                          <span style={{ 
-                            color: statusStyle.color, 
-                            backgroundColor: statusStyle.bg, 
-                            padding: '3px 8px', 
-                            borderRadius: '12px', 
-                            fontSize: '11px', 
-                            fontWeight: '700' 
-                          }}>
-                            {c.status}
-                          </span>
-                        </td>
-                        <td>{c.capacity}</td>
-                        <td>
-                          <span style={{ 
-                            fontWeight: '600',
-                            color: c.occupancy >= c.capacity ? '#dc2626' : 'var(--text-muted)'
-                          }}>
-                            {c.occupancy}
-                          </span>
-                          <span style={{ color: 'var(--text-light)', fontSize: '11px', marginLeft: '4px' }}>
-                            ({getOccupancyPercent(c.occupancy, c.capacity)}%)
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="table-footer">
-            <span>{filteredCenters.length} of {centers.length} records</span>
-            <div className="pagination-controls">
-              <button className="pagination-btn" disabled><ChevronLeft size={14} /></button>
-              <button className="pagination-btn active">1</button>
-              <button className="pagination-btn" disabled><ChevronRight size={14} /></button>
-            </div>
-          </div>
+      {/* FILTER & SEARCH */}
+      <div style={{ 
+        backgroundColor: '#ffffff', 
+        borderRadius: '12px', 
+        padding: '16px 20px', 
+        marginBottom: '24px',
+        border: '1px solid #e2e8f0',
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        gap: '16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, backgroundColor: '#f1f5f9', padding: '8px 14px', borderRadius: '8px' }}>
+          <Search size={16} color="#64748b" />
+          <input 
+            type="text" 
+            placeholder="Search by shelter name or barangay..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', width: '100%', color: '#0f172a' }}
+          />
         </div>
 
-        {/* Right Side: Evacuation Center Details */}
-        <div className="details-panel">
-          {!selectedCenter ? (
-            <div className="details-empty-state">
-              <Shield size={32} style={{ color: 'var(--text-light)', marginBottom: '8px' }} />
-              <p>Select an evacuation center first to view details.</p>
-            </div>
-          ) : (
-            <div className="details-content">
-              <div className="details-header">
-                <span className="details-station-name">{selectedCenter.name}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  <MapPin size={14} style={{ color: 'var(--color-brand)' }} />
-                  <span>Barangay {selectedCenter.barangay}</span>
-                </div>
-              </div>
+        <select 
+          value={statusFilter} 
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{ 
+            padding: '8px 14px', 
+            borderRadius: '8px', 
+            border: '1px solid #cbd5e1', 
+            fontSize: '13px', 
+            backgroundColor: '#fff',
+            color: '#334155',
+            outline: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <option value="">All Statuses</option>
+          <option value="Open">Open</option>
+          <option value="Standby">Standby</option>
+          <option value="Full">Full</option>
+        </select>
+      </div>
 
-              {/* Occupancy Progress Bar */}
-              <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', marginBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-main)' }}>Center Occupancy</span>
-                  <span style={{ color: getProgressBarColor(getOccupancyPercent(selectedCenter.occupancy, selectedCenter.capacity)) }}>
-                    {getOccupancyPercent(selectedCenter.occupancy, selectedCenter.capacity)}% Full
-                  </span>
-                </div>
-                <div style={{ height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ 
-                    height: '100%', 
-                    backgroundColor: getProgressBarColor(getOccupancyPercent(selectedCenter.occupancy, selectedCenter.capacity)),
-                    width: `${getOccupancyPercent(selectedCenter.occupancy, selectedCenter.capacity)}%`,
-                    transition: 'width 0.4s ease'
-                  }}></div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-light)', marginTop: '6px' }}>
-                  <span>{selectedCenter.occupancy} Evacuees</span>
-                  <span>{selectedCenter.capacity} Capacity limit</span>
-                </div>
-              </div>
+      {/* CARDS GRID */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+        {filteredCenters.map((center) => {
+          const badge = getStatusBadge(center.status);
+          const occupancyPercent = Math.min(100, Math.round((center.currentEvacuees / center.capacity) * 100));
 
-              {/* Details Grid */}
-              <div className="details-grid">
-                <div className="detail-item">
-                  <span className="detail-label">Current Status</span>
-                  <span style={{ 
-                    display: 'inline-block',
-                    color: getStatusColor(selectedCenter.status).color, 
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    marginTop: '2px'
-                  }}>
-                    {selectedCenter.status === 'Full' ? '⚠️ At Capacity (Full)' : '✓ Open & Accepting'}
-                  </span>
-                </div>
-
-                <div className="detail-item">
-                  <span className="detail-label">Designated Manager</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', marginTop: '2px' }}>
-                    <Building2 size={12} />
-                    <span>{selectedCenter.manager}</span>
-                  </div>
-                </div>
-
-                <div className="detail-item" style={{ gridColumn: 'span 2' }}>
-                  <span className="detail-label">Coordinator Contact Hotline</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', marginTop: '2px' }}>
-                    <Phone size={13} style={{ color: 'var(--color-brand)' }} />
-                    <span style={{ fontFamily: 'monospace' }}>{selectedCenter.contact}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Amenities */}
+          return (
+            <div 
+              key={center.id}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                justify: 'space-between'
+              }}
+            >
               <div>
-                <span className="detail-label" style={{ display: 'block', marginBottom: '8px' }}>Available Center Amenities</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {selectedCenter.amenities.map((amenity, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {getAmenityIcon(amenity)}
-                      <span>{amenity}</span>
-                    </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ 
+                    backgroundColor: badge.bg, 
+                    color: badge.color, 
+                    padding: '4px 10px', 
+                    borderRadius: '20px', 
+                    fontSize: '11px', 
+                    fontWeight: '700' 
+                  }}>
+                    {badge.label}
+                  </span>
+
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={14} color="#0d9488" /> {center.barangay}
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', marginBottom: '16px' }}>
+                  {center.name}
+                </h3>
+
+                {/* Occupancy Progress Bar */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', marginBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Occupancy</span>
+                    <span style={{ color: '#0f172a' }}>{center.currentEvacuees} / {center.capacity} evacuees ({occupancyPercent}%)</span>
+                  </div>
+                  <div style={{ width: '100%', backgroundColor: '#f1f5f9', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${occupancyPercent}%`, 
+                      backgroundColor: occupancyPercent > 80 ? '#ef4444' : '#0d9488', 
+                      height: '100%', 
+                      borderRadius: '4px',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: '#475569', marginBottom: '12px' }}>
+                  <div style={{ marginBottom: '4px' }}><strong>Officer in Charge:</strong> {center.headOfficer}</div>
+                  <div><strong>Hotline Contact:</strong> {center.contact}</div>
+                </div>
+
+                {/* Facilities Tags */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+                  {center.facilities.map((fac, idx) => (
+                    <span key={idx} style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '500' }}>
+                      {fac}
+                    </span>
                   ))}
                 </div>
               </div>
 
-              {/* Simulation Actions */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
-                <form onSubmit={handleAddOccupants} style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    type="number"
-                    className="form-input"
-                    placeholder="Enter evacuees delta (e.g. 50 or -30).."
-                    value={addOccupantsNum}
-                    onChange={(e) => setAddOccupantsNum(e.target.value)}
-                    style={{ flex: 1, padding: '8px 12px', fontSize: '12px' }}
-                  />
-                  <button type="submit" className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    Record Occupants
-                  </button>
-                </form>
-
-                <button 
-                  className="action-row-btn"
-                  onClick={handleToggleStatus}
-                  style={{ 
-                    justifyContent: 'center', 
-                    gap: '8px',
-                    borderColor: selectedCenter.status === 'Full' ? '#cbd5e1' : '#fca5a5',
-                    backgroundColor: selectedCenter.status === 'Full' ? '#ffffff' : '#fef2f2',
-                    color: selectedCenter.status === 'Full' ? 'var(--text-muted)' : '#dc2626'
-                  }}
-                >
-                  {selectedCenter.status === 'Full' ? <Check size={14} /> : <ShieldAlert size={14} />}
-                  <span>{selectedCenter.status === 'Full' ? 'Mark Center as Open' : 'Mark Center as Full'}</span>
+              <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button style={{ padding: '6px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#fff', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
+                  Edit Details
                 </button>
               </div>
             </div>
-          )}
-        </div>
-
+          );
+        })}
       </div>
+
+      {/* DRAWER MODAL FOR ADDING CENTER */}
+      {isDrawerOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 999, display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: '400px', backgroundColor: '#fff', height: '100%', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '-4px 0 15px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>Add Evacuation Center</h2>
+              <button onClick={() => setIsDrawerOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Center Name</label>
+                <input type="text" placeholder="e.g. Malanday Elementary School" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', marginTop: '4px', fontSize: '13px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Barangay Location</label>
+                <input type="text" placeholder="e.g. Tumana" value={formData.barangay} onChange={e => setFormData({...formData, barangay: e.target.value})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', marginTop: '4px', fontSize: '13px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Maximum Capacity (Evacuees)</label>
+                <input type="number" placeholder="1000" value={formData.capacity} onChange={e => setFormData({...formData, capacity: e.target.value})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', marginTop: '4px', fontSize: '13px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Officer In Charge</label>
+                <input type="text" placeholder="e.g. Capt. Juan Dela Cruz" value={formData.headOfficer} onChange={e => setFormData({...formData, headOfficer: e.target.value})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', marginTop: '4px', fontSize: '13px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Contact Number</label>
+                <input type="text" placeholder="0917-xxx-xxxx" value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', marginTop: '4px', fontSize: '13px' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <button onClick={() => setIsDrawerOpen(false)} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Cancel</button>
+              <button onClick={handleAddCenter} style={{ padding: '8px 16px', border: 'none', borderRadius: '6px', backgroundColor: '#0d9488', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Save Evacuation Center</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
