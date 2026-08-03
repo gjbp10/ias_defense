@@ -18,7 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { MARIKINA_DISTRICTS } from '../constants/marikinaData';
+import { MARIKINA_DISTRICTS } from '../constants/marikinaData.js';
 
 export default function Advisories() {
   const [advisories, setAdvisories] = useState([]);
@@ -621,15 +621,14 @@ export default function Advisories() {
               </button>
             </div>
 
-            {/* Drawer Body (scrollable form) */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Title</label>
+                <div className="form-group">
+                  <label className="form-label">Title</label>
                   <input
                     type="text"
-                    style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none' }}
+                    className="form-input"
                     placeholder="Advisory Title.."
                     value={formState.title}
                     onChange={(e) => setFormState({ ...formState, title: e.target.value })}
@@ -639,10 +638,10 @@ export default function Advisories() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Category</label>
+                  <div className="form-group">
+                    <label className="form-label">Category</label>
                     <select
-                      style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                      className="form-input"
                       value={formState.category}
                       onChange={(e) => setFormState({ ...formState, category: e.target.value })}
                     >
@@ -654,10 +653,10 @@ export default function Advisories() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Severity</label>
+                  <div className="form-group">
+                    <label className="form-label">Severity</label>
                     <select
-                      style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                      className="form-input"
                       value={formState.severity}
                       onChange={(e) => setFormState({ ...formState, severity: e.target.value })}
                     >
@@ -669,8 +668,8 @@ export default function Advisories() {
                 </div>
 
                 {/* District Grouped Barangays Selector */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Affected Areas (Marikina Barangays by District)</label>
+                <div className="form-group">
+                  <label className="form-label">Affected Areas (Marikina Barangays by District)</label>
 
                   {/* Selected Chips */}
                   {formState.affectedAreas && (
@@ -712,7 +711,7 @@ export default function Advisories() {
                   )}
 
                   <select
-                    style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff', cursor: 'pointer' }}
+                    className="form-input"
                     value=""
                     onChange={(e) => handleAddArea(e.target.value)}
                   >
@@ -735,9 +734,10 @@ export default function Advisories() {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Description</label>
+                <div className="form-group">
+                  <label className="form-label">Description</label>
                   <textarea
+                    className="form-textarea"
                     rows="3"
                     placeholder="Advisory description..."
                     value={formState.description}
@@ -747,9 +747,10 @@ export default function Advisories() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Recommended Action</label>
+                <div className="form-group">
+                  <label className="form-label">Recommended Action</label>
                   <textarea
+                    className="form-textarea"
                     rows="3"
                     placeholder="Advisory action recommendations..."
                     value={formState.recommendedAction}
@@ -760,21 +761,21 @@ export default function Advisories() {
 
                 {/* Separate Duration Start Date and Time */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Duration Start Date</label>
+                  <div className="form-group">
+                    <label className="form-label">Duration Start Date</label>
                     <input
                       type="date"
-                      style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                      className="form-input"
                       value={formState.startDate}
                       onChange={(e) => setFormState({ ...formState, startDate: e.target.value })}
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Start Time</label>
+                  <div className="form-group">
+                    <label className="form-label">Start Time</label>
                     <input
                       type="time"
-                      style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                      className="form-input"
                       value={formState.startTime}
                       onChange={(e) => setFormState({ ...formState, startTime: e.target.value })}
                     />
@@ -783,31 +784,31 @@ export default function Advisories() {
 
                 {/* Separate Duration End Date and Time */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Duration End Date</label>
+                  <div className="form-group">
+                    <label className="form-label">Duration End Date</label>
                     <input
                       type="date"
-                      style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                      className="form-input"
                       value={formState.endDate}
                       onChange={(e) => setFormState({ ...formState, endDate: e.target.value })}
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>End Time</label>
+                  <div className="form-group">
+                    <label className="form-label">End Time</label>
                     <input
                       type="time"
-                      style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                      className="form-input"
                       value={formState.endTime}
                       onChange={(e) => setFormState({ ...formState, endTime: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '500', color: '#334155' }}>Status</label>
+                <div className="form-group">
+                  <label className="form-label">Status</label>
                   <select
-                    style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                    className="form-input"
                     value={formState.status}
                     onChange={(e) => setFormState({ ...formState, status: e.target.value })}
                   >
