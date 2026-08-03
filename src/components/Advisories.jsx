@@ -355,6 +355,7 @@ export default function Advisories() {
             >
               <option value="">Category...</option>
               <option value="Weather">Weather</option>
+              <option value="Monitoring">Monitoring</option>
               <option value="Flood">Flood</option>
               <option value="Traffic">Traffic</option>
               <option value="Health">Health</option>
@@ -597,14 +598,26 @@ export default function Advisories() {
         </div>
       </div>
 
-      {/* Slide-over / Modal for Create/Edit */}
+      {/* Right-side Drawer for Create/Edit */}
       {isModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-container" style={{ width: '520px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">{modalMode === 'create' ? 'Create Advisory' : 'Edit Advisory'}</span>
-              <button className="btn-close-modal" onClick={() => setIsModalOpen(false)}>
-                <X size={18} />
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 999, display: 'flex', justifyContent: 'flex-end' }}
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            style={{ width: '420px', backgroundColor: '#fff', height: '100%', display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 15px rgba(0,0,0,0.1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: '#0f172a' }}>
+                {modalMode === 'create' ? 'Create Advisory' : 'Edit Advisory'}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={16} />
               </button>
             </div>
 
@@ -621,7 +634,7 @@ export default function Advisories() {
                     onChange={(e) => setFormState({ ...formState, title: e.target.value })}
                     required
                   />
-                  <span style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '2px' }}>Example: Heavy Rainfall Warning</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Example: Heavy Rainfall Warning</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -631,9 +644,9 @@ export default function Advisories() {
                       className="form-input"
                       value={formState.category}
                       onChange={(e) => setFormState({ ...formState, category: e.target.value })}
-                      style={{ backgroundColor: 'white' }}
                     >
                       <option value="Weather">Weather</option>
+                      <option value="Monitoring">Monitoring</option>
                       <option value="Flood">Flood</option>
                       <option value="Traffic">Traffic</option>
                       <option value="Health">Health</option>
@@ -646,7 +659,6 @@ export default function Advisories() {
                       className="form-input"
                       value={formState.severity}
                       onChange={(e) => setFormState({ ...formState, severity: e.target.value })}
-                      style={{ backgroundColor: 'white' }}
                     >
                       <option value="Low">Low</option>
                       <option value="Medium">Medium</option>
@@ -702,7 +714,6 @@ export default function Advisories() {
                     className="form-input"
                     value=""
                     onChange={(e) => handleAddArea(e.target.value)}
-                    style={{ backgroundColor: 'white', cursor: 'pointer' }}
                   >
                     <option value="" disabled>+ Add Barangay or District...</option>
                     <option value="ALL_CITY">📍 All Marikina City</option>
@@ -732,6 +743,7 @@ export default function Advisories() {
                     value={formState.description}
                     onChange={(e) => setFormState({ ...formState, description: e.target.value })}
                     required
+                    style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
                   />
                 </div>
 
@@ -743,6 +755,7 @@ export default function Advisories() {
                     placeholder="Advisory action recommendations..."
                     value={formState.recommendedAction}
                     onChange={(e) => setFormState({ ...formState, recommendedAction: e.target.value })}
+                    style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
                   />
                 </div>
 
@@ -755,7 +768,6 @@ export default function Advisories() {
                       className="form-input"
                       value={formState.startDate}
                       onChange={(e) => setFormState({ ...formState, startDate: e.target.value })}
-                      style={{ backgroundColor: 'white' }}
                     />
                   </div>
 
@@ -766,7 +778,6 @@ export default function Advisories() {
                       className="form-input"
                       value={formState.startTime}
                       onChange={(e) => setFormState({ ...formState, startTime: e.target.value })}
-                      style={{ backgroundColor: 'white' }}
                     />
                   </div>
                 </div>
@@ -780,7 +791,6 @@ export default function Advisories() {
                       className="form-input"
                       value={formState.endDate}
                       onChange={(e) => setFormState({ ...formState, endDate: e.target.value })}
-                      style={{ backgroundColor: 'white' }}
                     />
                   </div>
 
@@ -791,7 +801,6 @@ export default function Advisories() {
                       className="form-input"
                       value={formState.endTime}
                       onChange={(e) => setFormState({ ...formState, endTime: e.target.value })}
-                      style={{ backgroundColor: 'white' }}
                     />
                   </div>
                 </div>
@@ -802,7 +811,6 @@ export default function Advisories() {
                     className="form-input"
                     value={formState.status}
                     onChange={(e) => setFormState({ ...formState, status: e.target.value })}
-                    style={{ backgroundColor: 'white' }}
                   >
                     <option value="Active">Active</option>
                     <option value="Draft">Draft</option>
@@ -812,9 +820,19 @@ export default function Advisories() {
 
               </div>
 
-              <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', backgroundColor: '#fafafa', marginTop: 'auto' }}>
-                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Close</button>
-                <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Drawer Footer */}
+              <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '6px', backgroundColor: '#fff', cursor: 'pointer', fontWeight: '600', color: '#334155', fontSize: '13px' }}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  style={{ backgroundColor: '#0d9488', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
                   <Check size={16} />
                   <span>Publish Advisory</span>
                 </button>
