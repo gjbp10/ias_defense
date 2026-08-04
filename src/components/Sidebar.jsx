@@ -105,22 +105,10 @@ export default function Sidebar({ activeView, onViewChange }) {
                 <span>Reports Moderation</span>
               </div>
               <div 
-                className={`sidebar-link ${activeView === 'community-residents' ? 'active' : ''}`}
-                onClick={() => onViewChange('community-residents')}
-              >
-                <span>Residents Directory</span>
-              </div>
-              <div 
-                className={`sidebar-link ${activeView === 'community-sms-parser' ? 'active' : ''}`}
-                onClick={() => onViewChange('community-sms-parser')}
-              >
-                <span>Real-Time SMS Gateway</span>
-              </div>
-              <div 
                 className={`sidebar-link ${activeView === 'community-alerts' ? 'active' : ''}`}
                 onClick={() => onViewChange('community-alerts')}
               >
-                <span>Broadcast logs</span>
+                <span>User Management</span>
               </div>
             </div>
           )}
@@ -151,7 +139,7 @@ export default function Sidebar({ activeView, onViewChange }) {
                 className={`sidebar-link ${activeView === 'content-news' ? 'active' : ''}`}
                 onClick={() => onViewChange('content-news')}
               >
-                <span>News & Bulletins</span>
+                <span>Evacuation Centers</span>
               </div>
               <div 
                 className={`sidebar-link ${activeView === 'content-hotlines' ? 'active' : ''}`}
