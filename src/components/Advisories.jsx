@@ -621,8 +621,8 @@ export default function Advisories() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
 
                 <div className="form-group">
                   <label className="form-label">Title</label>
@@ -821,7 +821,7 @@ export default function Advisories() {
               </div>
 
               {/* Drawer Footer */}
-              <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: 'auto' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
