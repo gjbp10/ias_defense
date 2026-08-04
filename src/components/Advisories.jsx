@@ -160,9 +160,10 @@ export default function Advisories() {
 
   const getSeverityColor = (sev) => {
     switch (sev) {
-      case 'High': return { color: '#dc2626', bg: '#fef2f2' };
-      case 'Medium': return { color: '#ea580c', bg: '#fff7ed' };
-      case 'Low': return { color: '#0284c7', bg: '#f0f9ff' };
+      case 'Critical': return { color: '#ec1515ff', bg: '#fef2f2' };
+      case 'High': return { color: '#e75050ff', bg: '#fef2f2' };
+      case 'Moderate': return { color: '#b4a872ff', bg: '#fff7ed' };
+      case 'Low': return { color: '#60bb3cff', bg: '#f0f9ff' };
       default: return { color: '#4b5563', bg: '#f3f4f6' };
     }
   };
@@ -357,8 +358,6 @@ export default function Advisories() {
               <option value="Weather">Weather</option>
               <option value="Monitoring">Monitoring</option>
               <option value="Flood">Flood</option>
-              <option value="Traffic">Traffic</option>
-              <option value="Health">Health</option>
             </select>
 
             <select
@@ -368,8 +367,9 @@ export default function Advisories() {
               style={{ padding: '10px 14px', borderRadius: '10px', width: '130px', fontSize: '13px' }}
             >
               <option value="">Severity...</option>
+              <option value="Critical">Critical</option>
               <option value="High">High</option>
-              <option value="Medium">Medium</option>
+              <option value="Moderate">Moderate</option>
               <option value="Low">Low</option>
             </select>
 
@@ -660,9 +660,10 @@ export default function Advisories() {
                       value={formState.severity}
                       onChange={(e) => setFormState({ ...formState, severity: e.target.value })}
                     >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
+                      <option value="Low">Low Severity</option>
+                      <option value="Moderate">Moderate Severity</option>
+                      <option value="High">High Severity</option>
+                      <option value="Critical">Critical Severity</option>
                     </select>
                   </div>
                 </div>
