@@ -357,8 +357,6 @@ export default function Advisories() {
               <option value="Weather">Weather</option>
               <option value="Monitoring">Monitoring</option>
               <option value="Flood">Flood</option>
-              <option value="Traffic">Traffic</option>
-              <option value="Health">Health</option>
             </select>
 
             <select
@@ -368,9 +366,9 @@ export default function Advisories() {
               style={{ padding: '10px 14px', borderRadius: '10px', width: '130px', fontSize: '13px' }}
             >
               <option value="">Severity...</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              <option value="High">High Severity</option>
+              <option value="Medium">Medium Severity</option>
+              <option value="Low">Low Severity</option>
             </select>
 
             <select
@@ -648,8 +646,6 @@ export default function Advisories() {
                       <option value="Weather">Weather</option>
                       <option value="Monitoring">Monitoring</option>
                       <option value="Flood">Flood</option>
-                      <option value="Traffic">Traffic</option>
-                      <option value="Health">Health</option>
                     </select>
                   </div>
 
@@ -660,9 +656,9 @@ export default function Advisories() {
                       value={formState.severity}
                       onChange={(e) => setFormState({ ...formState, severity: e.target.value })}
                     >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
+                      <option value="Low">Low Severity</option>
+                      <option value="Medium">Medium Severity</option>
+                      <option value="High">High Severity</option>
                     </select>
                   </div>
                 </div>
