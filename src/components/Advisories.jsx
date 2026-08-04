@@ -402,7 +402,7 @@ export default function Advisories() {
                 {loading ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-light)' }}>
-                      Loading live advisories from Supabase...
+                      Loading Advisories...
                     </td>
                   </tr>
                 ) : filteredAdvisories.length === 0 ? (
