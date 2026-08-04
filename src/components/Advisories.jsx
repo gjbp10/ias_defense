@@ -160,9 +160,10 @@ export default function Advisories() {
 
   const getSeverityColor = (sev) => {
     switch (sev) {
-      case 'High': return { color: '#dc2626', bg: '#fef2f2' };
-      case 'Medium': return { color: '#ea580c', bg: '#fff7ed' };
-      case 'Low': return { color: '#0284c7', bg: '#f0f9ff' };
+      case 'Critical': return { color: '#ec1515ff', bg: '#fef2f2' };
+      case 'High': return { color: '#e75050ff', bg: '#fef2f2' };
+      case 'Moderate': return { color: '#b4a872ff', bg: '#fff7ed' };
+      case 'Low': return { color: '#60bb3cff', bg: '#f0f9ff' };
       default: return { color: '#4b5563', bg: '#f3f4f6' };
     }
   };
@@ -366,9 +367,10 @@ export default function Advisories() {
               style={{ padding: '10px 14px', borderRadius: '10px', width: '130px', fontSize: '13px' }}
             >
               <option value="">Severity...</option>
-              <option value="High">High Severity</option>
-              <option value="Medium">Medium Severity</option>
-              <option value="Low">Low Severity</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Low">Low</option>
             </select>
 
             <select
@@ -400,7 +402,7 @@ export default function Advisories() {
                 {loading ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-light)' }}>
-                      Loading live advisories from Supabase...
+                      Loading Advisories...
                     </td>
                   </tr>
                 ) : filteredAdvisories.length === 0 ? (
@@ -619,8 +621,8 @@ export default function Advisories() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
 
                 <div className="form-group">
                   <label className="form-label">Title</label>
@@ -657,8 +659,9 @@ export default function Advisories() {
                       onChange={(e) => setFormState({ ...formState, severity: e.target.value })}
                     >
                       <option value="Low">Low Severity</option>
-                      <option value="Medium">Medium Severity</option>
+                      <option value="Moderate">Moderate Severity</option>
                       <option value="High">High Severity</option>
+                      <option value="Critical">Critical Severity</option>
                     </select>
                   </div>
                 </div>
@@ -817,7 +820,7 @@ export default function Advisories() {
               </div>
 
               {/* Drawer Footer */}
-              <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: 'auto' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

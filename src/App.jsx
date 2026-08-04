@@ -12,9 +12,7 @@ import InundationPrediction from './components/InundationPrediction';
 
 // Community & Reports Components
 import ReportsModeration from './components/ReportsModeration';
-import SmsParserConsole from './components/SmsParserConsole';
-import ResidentsDirectory from './components/ResidentsDirectory';
-import BroadcastLogs from './components/BroadcastLogs';
+import BroadcastLogs from './components/UserManagement';
 
 // Content & Management Components
 import Advisories from './components/Advisories';

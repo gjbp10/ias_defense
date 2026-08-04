@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Phone,
   Plus,
@@ -9,55 +9,16 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 export default function EmergencyHotlines() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [selectedHotline, setSelectedHotline] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Dynamic state for hotlines based on the design mockup
-  const [hotlines, setHotlines] = useState([
-    {
-      id: 1,
-      agency: 'Rescue 161',
-      number: '161', // Displayed number in the table
-      primaryNumber: '161',
-      category: 'Marikina DRRMO',
-      availability: '24/7',
-      alternativeNumber: '(02) 8646-2436 to 38, (02) 8646-0427, or (02) 7273-6563',
-      email: 'drrmo.marikinacity@gmail.com',
-      contactPerson: 'John De Vera',
-      contactNumber: '09451234567',
-      coverage: 'Citywide'
-    },
-    {
-      id: 2,
-      agency: 'Marikina Police Station (PNP)',
-      number: '8646-1631',
-      primaryNumber: '8646-1631',
-      category: 'PNP',
-      availability: '24/7',
-      alternativeNumber: '0917-808-1631',
-      email: 'pnp.marikina@gmail.com',
-      contactPerson: 'P/Lt. Col. Ramos',
-      contactNumber: '09178081631',
-      coverage: 'Citywide'
-    },
-    {
-      id: 3,
-      agency: 'Marikina Fire Station (BFP)',
-      number: '8646-0427',
-      primaryNumber: '8646-0427',
-      category: 'BFP',
-      availability: '24/7',
-      alternativeNumber: '8646-0428',
-      email: 'bfp_marikina@yahoo.com',
-      contactPerson: 'F/Insp. Castaneda',
-      contactNumber: '09228490427',
-      coverage: 'Citywide'
-    }
-  ]);
+  const [hotlines, setHotlines] = useState([]);
 
   const [formData, setFormData] = useState({
     agency: '',
@@ -69,6 +30,57 @@ export default function EmergencyHotlines() {
     coverage: ''
   });
 
+  const fetchHotlines = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('emergency_hotlines')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.warn('Supabase fetch error:', error.message);
+      } else if (data) {
+        const mapped = data.map(item => ({
+          id: item.id,
+          agency: item.agency,
+          number: item.primary_number,
+          primaryNumber: item.primary_number,
+          category: item.category,
+          availability: item.availability || '24/7',
+          alternativeNumber: item.alternative_number || 'N/A',
+          email: item.email || 'N/A',
+          contactPerson: item.contact_person || 'N/A',
+          contactNumber: item.contact_number || 'N/A',
+          coverage: item.coverage || 'Citywide'
+        }));
+        setHotlines(mapped);
+        if (mapped.length > 0 && !selectedHotline) {
+          setSelectedHotline(mapped[0]);
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase client error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHotlines();
+
+    const channel = supabase
+      .channel('hotlines-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'emergency_hotlines' }, () => {
+        fetchHotlines();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const filteredHotlines = hotlines.filter(h => {
     const matchesSearch = h.agency.toLowerCase().includes(searchTerm.toLowerCase()) ||
       h.number.includes(searchTerm);
@@ -76,23 +88,25 @@ export default function EmergencyHotlines() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleSaveNew = () => {
-    const newEntry = {
-      id: Date.now(),
+  const handleSaveNew = async () => {
+    const payload = {
       agency: formData.agency,
-      number: formData.primaryNumber || 'N/A', // Set table display number to primary
-      primaryNumber: formData.primaryNumber,
+      primary_number: formData.primaryNumber,
+      alternative_number: formData.alternativeNumber || null,
       category: formData.category || 'Uncategorized',
-      availability: formData.availability || 'N/A',
-      alternativeNumber: formData.alternativeNumber || 'N/A',
-      email: formData.email || 'N/A',
-      contactPerson: 'N/A',
-      contactNumber: 'N/A',
-      coverage: formData.coverage || 'N/A'
+      availability: formData.availability || '24/7',
+      email: formData.email || null,
+      coverage: formData.coverage || 'Citywide'
     };
-    setHotlines([...hotlines, newEntry]);
-    setIsDrawerOpen(false);
-    setFormData({ agency: '', category: '', primaryNumber: '', alternativeNumber: '', email: '', availability: '', coverage: '' });
+
+    const { error } = await supabase.from('emergency_hotlines').insert([payload]);
+    if (error) {
+      alert('Error adding hotline: ' + error.message);
+    } else {
+      fetchHotlines();
+      setIsDrawerOpen(false);
+      setFormData({ agency: '', category: '', primaryNumber: '', alternativeNumber: '', email: '', availability: '', coverage: '' });
+    }
   };
 
   // Reusable inline style objects
@@ -179,6 +193,7 @@ export default function EmergencyHotlines() {
                 <th style={styles.tableHeader}>Agency</th>
                 <th style={styles.tableHeader}>Number</th>
                 <th style={styles.tableHeader}>Category</th>
+                <th style={styles.tableHeader}>Coverage</th>
                 <th style={{ ...styles.tableHeader, textAlign: 'right' }}>Availability</th>
               </tr>
             </thead>
@@ -192,12 +207,13 @@ export default function EmergencyHotlines() {
                   <td style={styles.tableCell}>{h.agency}</td>
                   <td style={styles.tableCell}>{h.number}</td>
                   <td style={styles.tableCell}>{h.category}</td>
+                  <td style={styles.tableCell}>{h.coverage || 'N/A'}</td>
                   <td style={{ ...styles.tableCell, textAlign: 'right' }}>{h.availability}</td>
                 </tr>
               ))}
               {filteredHotlines.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: '13px' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: '13px' }}>
                     No hotlines found.
                   </td>
                 </tr>
