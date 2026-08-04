@@ -648,8 +648,6 @@ export default function Advisories() {
                       <option value="Weather">Weather</option>
                       <option value="Monitoring">Monitoring</option>
                       <option value="Flood">Flood</option>
-                      <option value="Traffic">Traffic</option>
-                      <option value="Health">Health</option>
                     </select>
                   </div>
 
