@@ -1,456 +1,422 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Devices.Sensors;
-using Microsoft.Maui.Media;
-using Microsoft.Maui.Controls;
-using RescuAR.App.Models;
-using RescuAR.App.Services.Reports;
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, RefreshCw, CheckCircle, AlertTriangle, XCircle, MapPin, User, Clock, ShieldAlert } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
-namespace RescuAR.App.ViewModels.Reports
-{
-    public partial class ReportsViewModel : ObservableObject
-    {
-        private readonly CommunityReportService _reportService;
-        private readonly IOsmGeocodingService _osmService;
+export default function ReportsModeration() {
+  const [reports, setReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleString());
 
-        [ObservableProperty]
-        private ObservableCollection<CommunityReport> reports = new();
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('community_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        [ObservableProperty]
-        private string searchQuery = string.Empty;
-
-        [ObservableProperty]
-        private string selectedFilter = "Newest first";
-
-        [ObservableProperty]
-        private List<string> filterOptions = new() { "Newest first", "Oldest first", "Nearest to me" };
-
-        [ObservableProperty]
-        private bool isRefreshing;
-
-        // Modal Visibility
-        [ObservableProperty]
-        private bool isCreateModalVisible;
-
-        [ObservableProperty]
-        private bool isSuccessModalVisible;
-
-        [ObservableProperty]
-        private bool isMapPickerVisible;
-
-        // Create Report Form Fields
-        [ObservableProperty]
-        private string newReportTitle = string.Empty;
-
-        [ObservableProperty]
-        private string newReportDescription = string.Empty;
-
-        [ObservableProperty]
-        private string newReportCategory = "Flood Warning";
-
-        [ObservableProperty]
-        private List<string> categoryOptions = new()
-        {
-            "Flood Warning",
-            "Rescue Request",
-            "Road Hazard",
-            "Power Outage",
-            "General Alert"
-        };
-
-        [ObservableProperty]
-        private string newReportAddress = "41 C. Benitez St., MBLA Court, Malanday, Marikina City";
-
-        [ObservableProperty]
-        private double newReportLatitude = 14.6585;
-
-        [ObservableProperty]
-        private double newReportLongitude = 121.0955;
-
-        [ObservableProperty]
-        private string newReportMediaUrl = string.Empty;
-
-        [ObservableProperty]
-        private string newReportMediaType = "Image"; // Image or Video
-
-        [ObservableProperty]
-        private bool newReportHasMedia;
-
-        [ObservableProperty]
-        private bool newReportAllowComments = true;
-
-        [ObservableProperty]
-        private bool isFetchingLocation;
-
-        // Map Picker Search Query & OSM Results
-        [ObservableProperty]
-        private string mapSearchQuery = string.Empty;
-
-        [ObservableProperty]
-        private bool isSearchingOsm;
-
-        [ObservableProperty]
-        private ObservableCollection<OsmSearchResult> osmSearchResults = new();
-
-        [ObservableProperty]
-        private List<string> presetLocations = new()
-        {
-            "41 C. Benitez St., MBLA Court, Malanday, Marikina City",
-            "J.P. Rizal St. cor. Malaya St., Malanday, Marikina City",
-            "Malaya Street, Barangay Malanday, Marikina City",
-            "H. Bautista Elementary School, Concepcion Uno, Marikina City",
-            "Marikina Sports Center, Sta. Elena, Marikina City",
-            "Nangka Elementary School, Nangka, Marikina City",
-            "Sto. Niño National High School, Sto. Niño, Marikina City"
-        };
-
-        public ReportsViewModel() : this(new CommunityReportService(), new OsmGeocodingService())
-        {
+      if (error) {
+        console.error('Error fetching Supabase reports:', error);
+      } else if (data) {
+        setReports(data);
+        if (data.length > 0 && !selectedReport) {
+          setSelectedReport(data[0]);
         }
-
-        public ReportsViewModel(CommunityReportService reportService, IOsmGeocodingService osmService)
-        {
-            _reportService = reportService;
-            _osmService = osmService;
-            _ = LoadReportsAsync();
-        }
-
-        partial void OnSearchQueryChanged(string value)
-        {
-            _ = LoadReportsAsync();
-        }
-
-        partial void OnSelectedFilterChanged(string value)
-        {
-            _ = LoadReportsAsync();
-        }
-
-        partial void OnMapSearchQueryChanged(string value)
-        {
-            _ = SearchOsmLocationsAsync(value);
-        }
-
-        private async Task SearchOsmLocationsAsync(string query)
-        {
-            if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
-            {
-                OsmSearchResults.Clear();
-                IsSearchingOsm = false;
-                return;
-            }
-
-            IsSearchingOsm = true;
-            try
-            {
-                var list = await _osmService.SearchLocationsAsync(query);
-                OsmSearchResults = new ObservableCollection<OsmSearchResult>(list);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"OSM Search Exception: {ex.Message}");
-            }
-            finally
-            {
-                IsSearchingOsm = false;
-            }
-        }
-
-        [RelayCommand]
-        public async Task LoadReportsAsync()
-        {
-            IsRefreshing = true;
-            try
-            {
-                var list = await _reportService.GetReportsAsync(SearchQuery, SelectedFilter);
-                Reports = new ObservableCollection<CommunityReport>(list);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading reports: {ex.Message}");
-            }
-            finally
-            {
-                IsRefreshing = false;
-            }
-        }
-
-        [RelayCommand]
-        private async Task OpenCreateModalAsync()
-        {
-            // Reset fields
-            NewReportTitle = string.Empty;
-            NewReportDescription = string.Empty;
-            NewReportCategory = "Flood Warning";
-            NewReportMediaUrl = string.Empty;
-            NewReportHasMedia = false;
-            NewReportAllowComments = true;
-            IsCreateModalVisible = true;
-
-            // Automatically attempt to fetch current GPS location
-            await FetchUserLocationAsync();
-        }
-
-        [RelayCommand]
-        private void CloseCreateModal()
-        {
-            IsCreateModalVisible = false;
-        }
-
-        [RelayCommand]
-        private async Task FetchUserLocationAsync()
-        {
-            IsFetchingLocation = true;
-            try
-            {
-                var location = await Geolocation.Default.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5)));
-                if (location != null)
-                {
-                    NewReportLatitude = location.Latitude;
-                    NewReportLongitude = location.Longitude;
-
-                    var placemarks = await Geocoding.Default.GetPlacemarksAsync(location);
-                    var placemark = placemarks?.FirstOrDefault();
-                    if (placemark != null)
-                    {
-                        var parts = new List<string>();
-                        if (!string.IsNullOrWhiteSpace(placemark.FeatureName)) parts.Add(placemark.FeatureName);
-                        if (!string.IsNullOrWhiteSpace(placemark.Thoroughfare)) parts.Add(placemark.Thoroughfare);
-                        if (!string.IsNullOrWhiteSpace(placemark.SubLocality)) parts.Add(placemark.SubLocality);
-                        if (!string.IsNullOrWhiteSpace(placemark.Locality)) parts.Add(placemark.Locality);
-
-                        if (parts.Count > 0)
-                        {
-                            NewReportAddress = string.Join(", ", parts);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Location fetch error: {ex.Message}");
-                if (string.IsNullOrWhiteSpace(NewReportAddress))
-                {
-                    NewReportAddress = "41 C. Benitez St., MBLA Court, Malanday, Marikina City";
-                }
-            }
-            finally
-            {
-                IsFetchingLocation = false;
-            }
-        }
-
-        private FileResult? _selectedMediaFile;
-
-        [RelayCommand]
-        private async Task PickMediaAsync()
-        {
-            try
-            {
-                var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
-                if (status != PermissionStatus.Granted)
-                {
-                    status = await Permissions.RequestAsync<Permissions.Camera>();
-                }
-
-                if (status == PermissionStatus.Granted)
-                {
-                    if (MediaPicker.Default.IsCaptureSupported)
-                    {
-                        var photo = await MediaPicker.Default.CapturePhotoAsync();
-                        if (photo != null)
-                        {
-                            _selectedMediaFile = photo;
-                            NewReportMediaUrl = photo.FullPath;
-                            NewReportMediaType = "Image";
-                            NewReportHasMedia = true;
-                        }
-                    }
-                    else
-                    {
-                        await Shell.Current.DisplayAlertAsync("Camera Unavailable", "Camera capture is not supported on this device.", "OK");
-                    }
-                }
-                else
-                {
-                    await Shell.Current.DisplayAlertAsync("Permission Denied", "Camera permission is required to take photos.", "OK");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Media pick error: {ex.Message}");
-                await Shell.Current.DisplayAlertAsync("Camera Error", ex.Message, "OK");
-            }
-        }
-
-        [RelayCommand]
-        private void RemoveMedia()
-        {
-            _selectedMediaFile = null;
-            NewReportMediaUrl = string.Empty;
-            NewReportHasMedia = false;
-        }
-
-        [RelayCommand]
-        private void OpenMapPicker()
-        {
-            MapSearchQuery = string.Empty;
-            OsmSearchResults.Clear();
-            IsMapPickerVisible = true;
-        }
-
-        [RelayCommand]
-        private void CloseMapPicker()
-        {
-            IsMapPickerVisible = false;
-        }
-
-        [RelayCommand]
-        private void SelectOsmLocation(OsmSearchResult item)
-        {
-            if (item != null)
-            {
-                NewReportAddress = item.DisplayName;
-                NewReportLatitude = item.Latitude;
-                NewReportLongitude = item.Longitude;
-                IsMapPickerVisible = false;
-            }
-        }
-
-        [RelayCommand]
-        private void SelectPresetLocation(string location)
-        {
-            if (!string.IsNullOrWhiteSpace(location))
-            {
-                NewReportAddress = location;
-                IsMapPickerVisible = false;
-            }
-        }
-
-        [RelayCommand]
-        private void ConfirmCustomMapLocation()
-        {
-            if (!string.IsNullOrWhiteSpace(MapSearchQuery))
-            {
-                NewReportAddress = MapSearchQuery.Trim();
-            }
-            IsMapPickerVisible = false;
-        }
-
-        [RelayCommand]
-        private async Task SubmitReportAsync()
-        {
-            if (string.IsNullOrWhiteSpace(NewReportTitle))
-            {
-                await Shell.Current.DisplayAlertAsync("Required Field", "Please enter a title for your community report.", "OK");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(NewReportDescription))
-            {
-                await Shell.Current.DisplayAlertAsync("Required Field", "Please enter a description of the incident.", "OK");
-                return;
-            }
-
-            string publicMediaUrl = string.Empty;
-
-            if (_selectedMediaFile != null)
-            {
-                try
-                {
-                    using var stream = await _selectedMediaFile.OpenReadAsync();
-                    var uploadedUrl = await RescuAR.App.Services.Cloud.CloudinaryService.UploadImageStreamAsync(stream, _selectedMediaFile.FileName);
-                    if (!string.IsNullOrWhiteSpace(uploadedUrl))
-                    {
-                        publicMediaUrl = uploadedUrl;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Stream upload error: {ex.Message}");
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(publicMediaUrl) && !string.IsNullOrWhiteSpace(NewReportMediaUrl))
-            {
-                var uploadedUrl = await RescuAR.App.Services.Cloud.CloudinaryService.UploadImageAsync(NewReportMediaUrl);
-                if (!string.IsNullOrWhiteSpace(uploadedUrl))
-                {
-                    publicMediaUrl = uploadedUrl;
-                }
-            }
-
-            var report = new CommunityReport
-            {
-                Title = NewReportTitle.Trim(),
-                Description = NewReportDescription.Trim(),
-                Category = NewReportCategory,
-                Address = string.IsNullOrWhiteSpace(NewReportAddress) ? "Marikina City" : NewReportAddress.Trim(),
-                Latitude = NewReportLatitude,
-                Longitude = NewReportLongitude,
-                DistanceText = "50 meters away",
-                PostedBy = "Aubrey T.",
-                CreatedAt = DateTime.UtcNow,
-                MediaUrl = publicMediaUrl,
-                MediaType = NewReportMediaType,
-                HasMedia = !string.IsNullOrWhiteSpace(publicMediaUrl),
-                AllowComments = NewReportAllowComments
-            };
-
-            await _reportService.AddReportAsync(report);
-
-            // Hide create modal and show success modal
-            IsCreateModalVisible = false;
-            IsSuccessModalVisible = true;
-
-            await LoadReportsAsync();
-
-            // Auto dismiss success modal after 2 seconds
-            await Task.Delay(2000);
-            IsSuccessModalVisible = false;
-        }
-
-        [RelayCommand]
-        private void CloseSuccessModal()
-        {
-            IsSuccessModalVisible = false;
-        }
-
-        [RelayCommand]
-        private async Task ViewReportDetailsAsync(CommunityReport report)
-        {
-            if (report == null) return;
-            await Shell.Current.GoToAsync($"ReportDetails?ReportId={report.Id}");
-        }
-
-        [RelayCommand]
-        private async Task ToggleLikeAsync(CommunityReport report)
-        {
-            if (report == null) return;
-
-            if (report.IsLikedByCurrentUser)
-            {
-                report.IsLikedByCurrentUser = false;
-                report.LikeCount = Math.Max(0, report.LikeCount - 1);
-            }
-            else
-            {
-                report.IsLikedByCurrentUser = true;
-                report.LikeCount++;
-            }
-
-            await _reportService.ToggleLikeAsync(report.Id);
-
-            var index = Reports.IndexOf(report);
-            if (index >= 0)
-            {
-                Reports[index] = null!;
-                Reports[index] = report;
-            }
-        }
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+      setLastUpdated(new Date().toLocaleString());
     }
+  };
+
+  useEffect(() => {
+    fetchReports();
+
+    // Realtime listener for incoming mobile reports
+    const channel = supabase
+      .channel('public:community_reports')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_reports' }, () => {
+        fetchReports();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const maskName = (name) => {
+    if (!name) return 'Us*** U.';
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts[0] || '';
+    const first2 = firstName.length >= 2 ? firstName.substring(0, 2) : firstName;
+    let surnameInitial = '';
+    if (parts.length > 1) {
+      surnameInitial = parts[parts.length - 1][0].toUpperCase() + '.';
+    }
+    return `${first2}*** ${surnameInitial}`.trim();
+  };
+
+  const handleUpdateStatus = async (reportId, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('community_reports')
+        .update({ status: newStatus })
+        .eq('id', reportId);
+
+      if (error) {
+        alert('Failed to update report status: ' + error.message);
+      } else {
+        setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+        if (selectedReport && selectedReport.id === reportId) {
+          setSelectedReport({ ...selectedReport, status: newStatus });
+        }
+      }
+    } catch (err) {
+      alert('Error updating status: ' + err.message);
+    }
+  };
+
+  const filteredReports = reports.filter(r => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (r.title && r.title.toLowerCase().includes(q)) ||
+      (r.description && r.description.toLowerCase().includes(q)) ||
+      (r.posted_by && r.posted_by.toLowerCase().includes(q)) ||
+      (r.category && r.category.toLowerCase().includes(q)) ||
+      (r.address && r.address.toLowerCase().includes(q))
+    );
+  });
+
+  return (
+    <div className="main-view">
+      {/* View Header */}
+      <div className="view-header">
+        <div className="view-title-container">
+          <h1>Reports Moderation</h1>
+          <span className="view-subtitle">Last updated: {lastUpdated}</span>
+        </div>
+      </div>
+
+      <div className="stations-split-layout" style={{ marginTop: '24px', alignItems: 'flex-start' }}>
+
+        {/* Left Column: Queue & Map */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', flex: 1 }}>
+
+          {/* Reports Queue Section */}
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-main)' }}>
+              Reports Queue ({filteredReports.length})
+            </h2>
+
+            {/* Search Bar */}
+            <div style={{ marginBottom: '24px' }}>
+              <input
+                type="text"
+                placeholder="Search for a report by title, category, or user..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: '#fff',
+                  fontSize: '14px',
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+              />
+            </div>
+
+            {/* Table Card */}
+            <div className="stations-card" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="table-container" style={{ margin: '0' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid var(--color-border)' }}>
+                    <tr>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Report Title</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>User</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Category</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Attachment</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                          Loading live Supabase reports...
+                        </td>
+                      </tr>
+                    ) : filteredReports.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                          No community reports submitted yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredReports.map((report) => (
+                        <tr
+                          key={report.id}
+                          onClick={() => setSelectedReport(report)}
+                          className="table-row-hover"
+                          style={{
+                            borderBottom: '1px solid var(--color-border)',
+                            cursor: 'pointer',
+                            backgroundColor: selectedReport?.id === report.id ? '#f0fdf4' : 'transparent'
+                          }}
+                        >
+                          <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>
+                            {report.title || 'Untitled Report'}
+                          </td>
+                          <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-main)' }}>
+                            {maskName(report.posted_by)}
+                          </td>
+                          <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600', color: '#0284c7' }}>
+                            {report.category || 'General'}
+                          </td>
+                          <td style={{ padding: '16px 24px', fontSize: '13px' }}>
+                            {report.media_url ? (
+                              <a
+                                href={report.media_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#f0fdf4', color: '#16a34a', fontWeight: '700', textDecoration: 'none', fontSize: '12px' }}
+                              >
+                                View Media
+                              </a>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: '12px' }}>No media</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600' }}>
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              backgroundColor: report.status === 'Approved' ? '#dcfce7' : report.status === 'Resolved' ? '#e0f2fe' : report.status === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                              color: report.status === 'Approved' ? '#15803d' : report.status === 'Resolved' ? '#0369a1' : report.status === 'Rejected' ? '#dc2626' : '#b45309'
+                            }}>
+                              {report.status || 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Footer */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px 24px',
+                borderTop: '1px solid var(--color-border)',
+                backgroundColor: '#fff'
+              }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {filteredReports.length} {filteredReports.length === 1 ? 'record' : 'records'} total
+                </span>
+                <button
+                  onClick={fetchReports}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: '#fff',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <RefreshCw size={14} /> Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Map View Section */}
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-main)' }}>
+              Report Location Map
+            </h2>
+            <div className="stations-card" style={{ padding: '0', overflow: 'hidden', height: '350px', backgroundColor: '#e5e7eb' }}>
+              <iframe
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                scrolling="no"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(selectedReport?.longitude || 121.0955) - 0.02}%2C${(selectedReport?.latitude || 14.6585) - 0.02}%2C${(selectedReport?.longitude || 121.0955) + 0.02}%2C${(selectedReport?.latitude || 14.6585) + 0.02}&amp;layer=mapnik&amp;marker=${selectedReport?.latitude || 14.6585}%2C${selectedReport?.longitude || 121.0955}`}
+                style={{ border: 0, display: 'block' }}
+                title="Map View"
+              ></iframe>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Right Column: Detailed Inspector Card */}
+        <div style={{ width: '380px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>
+              Report Details
+            </h2>
+          </div>
+
+          {selectedReport ? (
+            <div className="stations-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid var(--color-border)' }}>
+
+              {/* Category & Status Badges */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#0284c7', backgroundColor: '#e0f2fe', padding: '4px 10px', borderRadius: '8px' }}>
+                  {selectedReport.category || 'General'}
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: selectedReport.status === 'Approved' ? '#15803d' : '#b45309', backgroundColor: selectedReport.status === 'Approved' ? '#dcfce7' : '#fef3c7', padding: '4px 10px', borderRadius: '8px' }}>
+                  {selectedReport.status || 'Pending'}
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
+                  {selectedReport.title}
+                </h3>
+                <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.5', margin: 0 }}>
+                  {selectedReport.description || 'No detailed description provided.'}
+                </p>
+              </div>
+
+              {/* Uploaded Media Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                  Uploaded Media Attachment
+                </span>
+                {selectedReport.media_url ? (
+                  <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <a href={selectedReport.media_url} target="_blank" rel="noreferrer">
+                      <img
+                        src={selectedReport.media_url}
+                        alt="Report Attachment"
+                        style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }}
+                      />
+                    </a>
+                  </div>
+                ) : (
+                  <div style={{ padding: '14px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px dashed #cbd5e1', fontSize: '13px', color: '#94a3b8', textAlign: 'center' }}>
+                    No media attached to this report.
+                  </div>
+                )}
+              </div>
+
+              {/* Address & Reporter Meta */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#475569' }}>
+                  <MapPin size={16} color="#0a8491" />
+                  <span style={{ fontWeight: '600', color: '#0f172a' }}>{selectedReport.address || 'Marikina City'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#475569' }}>
+                  <User size={16} color="#64748b" />
+                  <span>Posted by: <strong>{maskName(selectedReport.posted_by)}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8' }}>
+                  <Clock size={14} />
+                  <span>{new Date(selectedReport.created_at || Date.now()).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Admin Moderation Actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                  Admin Actions
+                </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedReport.id, 'Approved')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: '#16a34a',
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <CheckCircle size={16} /> Approve
+                  </button>
+
+                  <button
+                    onClick={() => handleUpdateStatus(selectedReport.id, 'Resolved')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: '#0284c7',
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <ShieldAlert size={16} /> Resolve
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => handleUpdateStatus(selectedReport.id, 'Rejected')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid #fee2e2',
+                    backgroundColor: '#fff',
+                    color: '#dc2626',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <XCircle size={16} /> Reject Report
+                </button>
+              </div>
+
+            </div>
+          ) : (
+            <div className="stations-card" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+              <span style={{ fontSize: '14px', color: '#9ca3af' }}>Select a report from the table queue to view details.</span>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+    </div>
+  );
 }
+
