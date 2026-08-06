@@ -38,9 +38,11 @@ export default function App() {
   const [isAdvisoryOpen, setIsAdvisoryOpen] = useState(false);
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
   const [isPredictOpen, setIsPredictOpen] = useState(false);
+  const [activeStationData, setActiveStationData] = useState(null);
 
-  const handleActionClick = (actionType) => {
+  const handleActionClick = (actionType, data = null) => {
     if (actionType === 'advisory') {
+      if (data) setActiveStationData(data);
       setIsAdvisoryOpen(true);
     } else if (actionType === 'notify') {
       setIsNotifyOpen(true);
@@ -104,6 +106,8 @@ export default function App() {
       <AdvisoryModal
         isOpen={isAdvisoryOpen}
         onClose={() => setIsAdvisoryOpen(false)}
+        stationData={activeStationData}
+        onViewAdvisories={() => setActiveView('content-advisories')}
       />
       <NotifyModal
         isOpen={isNotifyOpen}

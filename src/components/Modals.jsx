@@ -20,13 +20,125 @@ function BaseModal({ isOpen, onClose, title, children }) {
   );
 }
 
+import { supabase } from '../supabaseClient';
+
 /* --- GENERATE ADVISORY MODAL --- */
-export function AdvisoryModal({ isOpen, onClose }) {
+export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }) {
   const [copied, setCopied] = useState(false);
-  const [subject, setSubject] = useState('PUBLIC WARNING: Marikina River Alert Level 2 (PREPARE)');
-  const [message, setMessage] = useState(
-    `RESIDENTS IN BARANGAYS TUMANA & NANGKA:\n\nPlease be advised that the Marikina River has reached Alert Level 2 (16.2 meters) at 08:42 AM. Water levels are rising.\n\nAction required:\n1. Secure all electrical equipment.\n2. Prepare emergency go-bags.\n3. Be ready for evacuation if Alert Level 3 (18.0m) is declared.\n\n- Marikina LGU early warning service`
-  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [category, setCategory] = useState('Flood Risk');
+  const [severity, setSeverity] = useState('High');
+  const [affectedAreas, setAffectedAreas] = useState('Tumana, Nangka, Malanday');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+
+  // Prefill default template dynamically when modal opens or stationData updates
+  useEffect(() => {
+    if (isOpen) {
+      const rawStationName = stationData?.stationName || 'Sto. Niño';
+      const cleanStationName = rawStationName.replace(/ Station/gi, '').trim();
+      const displayStationTitle = `${cleanStationName} Station`;
+      const level = stationData?.level !== undefined ? Number(stationData.level).toFixed(1) : '16.2';
+      const alertStatus = stationData?.alertStatus || '2nd Alarm';
+      const alertLabel = stationData?.alertLabel || '2nd Alarm (Preparation)';
+
+      // Automate Affected Areas mapping based on station location & alert severity
+      let computedAreas = [];
+      let computedSeverity = 'Low';
+
+      const is3rd = alertStatus.includes('3rd') || Number(level) >= 18;
+      const is2nd = alertStatus.includes('2nd') || (Number(level) >= 16 && Number(level) < 18);
+      const is1st = alertStatus.includes('1st') || (Number(level) >= 15 && Number(level) < 16);
+
+      if (is3rd) {
+        computedSeverity = 'Critical';
+      } else if (is2nd) {
+        computedSeverity = 'High';
+      } else if (is1st) {
+        computedSeverity = 'Medium';
+      } else {
+        computedSeverity = 'Low';
+      }
+
+      const nameLower = cleanStationName.toLowerCase();
+
+      if (nameLower.includes('nangka')) {
+        if (is3rd) {
+          computedAreas = ['Nangka', 'Tumana', 'Concepcion I', 'Banaba Boundary'];
+        } else if (is2nd) {
+          computedAreas = ['Nangka', 'Tumana Riverside'];
+        } else {
+          computedAreas = ['Nangka Low-Lying Zones'];
+        }
+      } else if (nameLower.includes('tumana')) {
+        if (is3rd) {
+          computedAreas = ['Tumana', 'Malanday', 'Nangka', 'Concepcion I'];
+        } else if (is2nd) {
+          computedAreas = ['Tumana', 'Malanday Riverside'];
+        } else {
+          computedAreas = ['Tumana Low-Lying Zones'];
+        }
+      } else if (nameLower.includes('sto') || nameLower.includes('nino')) {
+        if (is3rd) {
+          computedAreas = ['Sto. Niño', 'Malanday', 'Tumana', 'Jesus dela Peña', 'Kalumpang', 'San Roque'];
+        } else if (is2nd) {
+          computedAreas = ['Sto. Niño', 'Malanday', 'Tumana', 'Jesus dela Peña'];
+        } else if (is1st) {
+          computedAreas = ['Sto. Niño', 'Malanday Riverside'];
+        } else {
+          computedAreas = ['Sto. Niño Low-Lying Zones'];
+        }
+      } else if (nameLower.includes('rodriguez')) {
+        if (is3rd || is2nd) {
+          computedAreas = ['Upper Marikina Basin', 'Nangka Floodway Entrance', 'Tumana Floodplain'];
+        } else {
+          computedAreas = ['Upper Marikina Basin Corridor'];
+        }
+      } else if (nameLower.includes('san jose')) {
+        if (is3rd || is2nd) {
+          computedAreas = ['San Jose Flood Control Zone', 'Nangka Area', 'Tumana Riverbanks'];
+        } else {
+          computedAreas = ['San Jose Stream Gauge Perimeter'];
+        }
+      } else if (nameLower.includes('batasan')) {
+        if (is3rd || is2nd) {
+          computedAreas = ['Batasan Hills Boundary', 'Tumana', 'Malanday Spillway Zone'];
+        } else {
+          computedAreas = ['Batasan Stream Corridor'];
+        }
+      } else {
+        if (is3rd) {
+          computedAreas = ['Barangka', 'Jesus dela Peña', 'Malanday', 'Nangka', 'Sto. Niño', 'Tumana'];
+        } else if (is2nd) {
+          computedAreas = ['Tumana', 'Nangka', 'Malanday', 'Sto. Niño'];
+        } else {
+          computedAreas = ['Riverbank Low-Lying Barangays'];
+        }
+      }
+
+      const affectedString = computedAreas.join(', ');
+      setAffectedAreas(affectedString);
+      setSeverity(computedSeverity);
+
+      const generatedSubject = `FLOOD WARNING: ${displayStationTitle} reached ${alertStatus.toUpperCase()} (${level}m)`;
+      
+      let actionInstructions = '';
+      if (is3rd) {
+        actionInstructions = `CRITICAL ACTION REQUIRED:\n1. Immediate mandatory evacuation is in effect for identified danger zones in ${affectedString}.\n2. Proceed to designated evacuation centers immediately.\n3. Turn off main electric switches before evacuating.`;
+      } else if (is2nd) {
+        actionInstructions = `PREPARATION REQUIRED:\n1. Residents in ${affectedString} must secure emergency go-bags and vital documents.\n2. Move electrical appliances and vehicles to higher ground.\n3. Stand by for potential mandatory evacuation orders (Alert Level 3).`;
+      } else if (is1st) {
+        actionInstructions = `MONITORING ADVISORY:\n1. Communities in ${affectedString} should monitor river level updates closely.\n2. Keep emergency communications active and charge electronic devices.`;
+      } else {
+        actionInstructions = `ROUTINE NOTICE:\n1. Water level at ${displayStationTitle} is within normal bounds (${level}m).\n2. No immediate threat of overflow in ${affectedString}.`;
+      }
+
+      const generatedMessage = `AUTOMATIC PUBLIC WATER LEVEL ADVISORY:\n\nPlease be advised that the ${displayStationTitle} has registered a water gauge reading of ${level} meters (${alertLabel}).\n\nDirectly Affected Barangays / Sectors:\n${affectedString}\n\n${actionInstructions}\n\n- Marikina Disaster Risk Reduction & Management Office (MCDRRMO)`;
+
+      setSubject(generatedSubject);
+      setMessage(generatedMessage);
+    }
+  }, [isOpen, stationData]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`Subject: ${subject}\n\n${message}`);
@@ -34,16 +146,85 @@ export function AdvisoryModal({ isOpen, onClose }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSend = () => {
-    alert('Advisory draft published successfully.');
-    onClose();
+  const handleSend = async () => {
+    if (!subject.trim() || !message.trim()) {
+      alert('Please provide a subject and body text for the advisory.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase
+        .from('advisories')
+        .insert([
+          {
+            title: subject,
+            category: category,
+            severity: severity,
+            status: 'Active',
+            description: message,
+            recommended_action: 'Monitor river levels, keep emergency kits ready, and obey local LGU instructions.',
+            affected_areas: affectedAreas,
+            duration_start: new Date().toISOString(),
+            published_at: new Date().toISOString()
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error('Error inserting advisory to Supabase:', error);
+        alert(`Could not publish advisory to database: ${error.message}`);
+      } else {
+        alert('✅ Advisory created and published directly to the Advisories page!');
+        if (onViewAdvisories) {
+          onViewAdvisories();
+        }
+        onClose();
+      }
+    } catch (err) {
+      console.error('Unexpected error publishing advisory:', err);
+      alert('An unexpected error occurred while publishing the advisory.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Generate Advisory Template">
+    <BaseModal isOpen={isOpen} onClose={onClose} title="Generate & Publish Advisory">
       <div className="modal-body">
-        <div className="form-group">
-          <label className="form-label">Advisory Subject Header</label>
+        <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+          <div>
+            <label className="form-label">Category</label>
+            <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="Flood Risk">Flood Risk</option>
+              <option value="Weather">Weather</option>
+              <option value="Evacuation">Evacuation</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+          <div>
+            <label className="form-label">Severity Level</label>
+            <select className="form-input" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: '12px' }}>
+          <label className="form-label">Affected Barangays / Sectors</label>
+          <input 
+            type="text" 
+            className="form-input" 
+            value={affectedAreas} 
+            onChange={(e) => setAffectedAreas(e.target.value)} 
+          />
+        </div>
+
+        <div className="form-group" style={{ marginBottom: '12px' }}>
+          <label className="form-label">Advisory Subject Title</label>
           <input 
             type="text" 
             className="form-input" 
@@ -51,8 +232,9 @@ export function AdvisoryModal({ isOpen, onClose }) {
             onChange={(e) => setSubject(e.target.value)} 
           />
         </div>
+
         <div className="form-group">
-          <label className="form-label">Advisory Body Text</label>
+          <label className="form-label">Advisory Body Content</label>
           <textarea 
             className="form-textarea" 
             rows="6"
@@ -66,9 +248,14 @@ export function AdvisoryModal({ isOpen, onClose }) {
           {copied ? <Check size={14} style={{ color: 'var(--color-online)' }} /> : <Copy size={14} />}
           <span>{copied ? 'Copied!' : 'Copy Text'}</span>
         </button>
-        <button className="btn-primary" onClick={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button 
+          className="btn-primary" 
+          onClick={handleSend} 
+          disabled={isSubmitting}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
           <Send size={14} />
-          <span>Publish Advisory</span>
+          <span>{isSubmitting ? 'Publishing...' : 'Publish to Advisories Page'}</span>
         </button>
       </div>
     </BaseModal>

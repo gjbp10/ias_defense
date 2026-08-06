@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { calculateAlertStatus } from '../utils/waterLevelUtils';
+import { calculateAlertStatus, getStationThresholds } from '../utils/waterLevelUtils';
 import {
   RefreshCw,
   ArrowUpRight,
@@ -61,39 +61,73 @@ export default function RiverLevel({ onActionClick }) {
   const [timeRange, setTimeRange] = useState('24h');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState('Loading live data...');
-  const [currentLevel, setCurrentLevel] = useState(16.2);
-  const [currentAlert, setCurrentAlert] = useState(calculateAlertStatus(16.2));
+  const [stationsList, setStationsList] = useState([]);
+  const [selectedStationId, setSelectedStationId] = useState(null);
+  const [selectedStation, setSelectedStation] = useState(null);
+  const [currentLevel, setCurrentLevel] = useState(12.1);
+  const [currentAlert, setCurrentAlert] = useState(calculateAlertStatus(12.1));
 
-  const fetchStoNinoData = async () => {
+  // Fetch all available scraped monitoring stations
+  const fetchAllStations = async () => {
     try {
       const { data, error } = await supabase
         .from('monitoring_stations')
         .select('*')
-        .ilike('station_name', '%Sto%')
-        .single();
+        .order('station_name', { ascending: true });
 
-      if (data) {
-        const level = Number(data.level);
-        setCurrentLevel(level);
-        setCurrentAlert(calculateAlertStatus(level, data.station_name));
-        
-        const latestTimestamp = data.updated_at ? new Date(data.updated_at) : new Date();
-        const dateStr = latestTimestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const timeStr = latestTimestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        setLastUpdated(`${dateStr} • ${timeStr}`);
+      if (error) {
+        console.error('Error fetching monitoring stations:', error);
+        return [];
+      }
+
+      if (data && data.length > 0) {
+        setStationsList(data);
+        return data;
       }
     } catch (err) {
-      console.error('Error fetching Sto. Niño station telemetry:', err);
+      console.error('Unexpected error fetching stations:', err);
+    }
+    return [];
+  };
+
+  // Load telemetry data for selected station (or default Sto. Niño)
+  const updateStationViewData = (station) => {
+    if (!station) return;
+    const level = Number(station.level) || 0;
+    setSelectedStation(station);
+    setCurrentLevel(level);
+    setCurrentAlert(calculateAlertStatus(level, station.station_name));
+
+    const latestTimestamp = station.updated_at ? new Date(station.updated_at) : new Date();
+    const dateStr = latestTimestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = latestTimestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    setLastUpdated(`${dateStr} • ${timeStr}`);
+  };
+
+  const loadData = async (targetId = null) => {
+    const list = await fetchAllStations();
+    if (list.length > 0) {
+      let target = null;
+      const currentId = targetId !== null ? targetId : selectedStationId;
+      if (currentId !== null) {
+        target = list.find(s => String(s.id) === String(currentId));
+      }
+      // If no station matched or none selected yet, default to Sto. Niño or first station
+      if (!target) {
+        target = list.find(s => s.station_name.toLowerCase().includes('sto')) || list[0];
+      }
+      setSelectedStationId(target.id);
+      updateStationViewData(target);
     }
   };
 
   useEffect(() => {
-    fetchStoNinoData();
+    loadData();
 
     const channel = supabase
       .channel('river-level-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_stations' }, () => {
-        fetchStoNinoData();
+        loadData();
       })
       .subscribe();
 
@@ -102,11 +136,18 @@ export default function RiverLevel({ onActionClick }) {
     };
   }, []);
 
-  const chartData = timeRange === '24h' ? MOCK_DATA_24H : MOCK_DATA_7D;
+  const handleStationChange = (e) => {
+    const newId = e.target.value;
+    setSelectedStationId(newId);
+    const target = stationsList.find(s => String(s.id) === String(newId));
+    if (target) {
+      updateStationViewData(target);
+    }
+  };
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchStoNinoData().finally(() => {
+    loadData().finally(() => {
       setIsRefreshing(false);
     });
   };
@@ -168,22 +209,93 @@ export default function RiverLevel({ onActionClick }) {
     return null;
   };
 
+  const stationDisplayName = selectedStation ? selectedStation.station_name : 'River';
+  const currentStationThresholds = getStationThresholds(stationDisplayName);
+
+  // Generate dynamic chart data proportional to the active station's level & threshold baseline
+  const getDynamicChartData = () => {
+    const baseVal = currentLevel > 0 ? currentLevel : currentStationThresholds.ALARM_1 - 2.5;
+    
+    if (timeRange === '24h') {
+      return [
+        { time: '00:00', observed: Number((baseVal - 3.5).toFixed(1)), predicted: Number((baseVal - 3.8).toFixed(1)) },
+        { time: '02:00', observed: Number((baseVal - 3.0).toFixed(1)), predicted: Number((baseVal - 3.3).toFixed(1)) },
+        { time: '04:00', observed: Number((baseVal - 2.2).toFixed(1)), predicted: Number((baseVal - 2.7).toFixed(1)) },
+        { time: '06:00', observed: Number((baseVal - 1.3).toFixed(1)), predicted: Number((baseVal - 1.7).toFixed(1)) },
+        { time: '08:00', observed: Number((baseVal - 0.5).toFixed(1)), predicted: Number((baseVal - 0.9).toFixed(1)) },
+        { time: '10:00', observed: Number((baseVal - 0.1).toFixed(1)), predicted: Number((baseVal - 0.3).toFixed(1)) },
+        { time: '12:00', observed: Number(baseVal.toFixed(1)), predicted: Number((baseVal - 0.1).toFixed(1)) },
+        { time: '14:00', observed: null, predicted: Number((baseVal + 0.3).toFixed(1)) },
+        { time: '16:00', observed: null, predicted: Number((baseVal + 0.7).toFixed(1)) },
+        { time: '18:00', observed: null, predicted: Number((baseVal + 1.1).toFixed(1)) },
+        { time: '20:00', observed: null, predicted: Number((baseVal + 1.4).toFixed(1)) },
+        { time: '22:00', observed: null, predicted: Number((baseVal + 1.6).toFixed(1)) }
+      ];
+    }
+
+    return [
+      { time: 'Mon', observed: Number((baseVal - 2.5).toFixed(1)), predicted: Number((baseVal - 2.3).toFixed(1)) },
+      { time: 'Tue', observed: Number((baseVal - 1.8).toFixed(1)), predicted: Number((baseVal - 2.0).toFixed(1)) },
+      { time: 'Wed', observed: Number((baseVal - 1.0).toFixed(1)), predicted: Number((baseVal - 0.8).toFixed(1)) },
+      { time: 'Thu', observed: Number(baseVal.toFixed(1)), predicted: Number((baseVal - 0.2).toFixed(1)) },
+      { time: 'Fri', observed: Number((baseVal - 0.6).toFixed(1)), predicted: Number((baseVal - 0.4).toFixed(1)) },
+      { time: 'Sat', observed: Number((baseVal - 1.2).toFixed(1)), predicted: Number((baseVal - 1.0).toFixed(1)) },
+      { time: 'Sun', observed: Number((baseVal - 1.9).toFixed(1)), predicted: Number((baseVal - 1.6).toFixed(1)) }
+    ];
+  };
+
+  const chartData = getDynamicChartData();
+
   return (
     <div className="river-level-view">
       {/* Page Header */}
       <div className="river-header">
         <div className="title-group">
-          <div className="title-row">
-            <h1 className="river-title">Marikina River Level</h1>
+          <div className="title-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h1 className="river-title">{stationDisplayName} Level</h1>
             <span className="live-telemetry-badge">
               <span className="pulse-dot-green"></span>
-              Sto. Niño Telemetry Active
+              {stationDisplayName} Telemetry Active
             </span>
           </div>
           <p className="river-subtitle">Last updated: {lastUpdated}</p>
         </div>
 
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Interchangeable Station Dropdown Selector */}
+          <div className="station-selector-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label htmlFor="station-select" style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted, #64748b)' }}>
+              Station:
+            </label>
+            <select
+              id="station-select"
+              value={selectedStationId || ''}
+              onChange={handleStationChange}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#1e293b',
+                cursor: 'pointer',
+                outline: 'none',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+            >
+              {stationsList.length === 0 ? (
+                <option value="">Sto. Niño Station</option>
+              ) : (
+                stationsList.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.station_name} ({st.level}m)
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
           <button
             className="refresh-btn"
             onClick={handleRefresh}
@@ -213,7 +325,7 @@ export default function RiverLevel({ onActionClick }) {
 
             <div className="trend-chip rising">
               <ArrowUpRight size={16} />
-              <span>Sto. Niño Gauge</span>
+              <span>{stationDisplayName}</span>
             </div>
           </div>
 
@@ -230,43 +342,49 @@ export default function RiverLevel({ onActionClick }) {
         <div className="river-card thresholds-card">
           <div className="card-top-label">
             <ShieldAlert size={16} className="text-brand" />
-            <span>MARIKINA ALERT THRESHOLDS</span>
+            <span>{stationDisplayName.toUpperCase()} ALERT THRESHOLDS</span>
           </div>
 
           <div className="thresholds-progress-stack">
             {/* Level 1 */}
-            <div className="threshold-bar-item level-1">
+            <div className={`threshold-bar-item level-1 ${currentAlert.status === '1st Alarm' ? 'active' : ''}`}>
               <div className="threshold-info">
-                <span className="thresh-name">Alert Level 1 (Alarm)</span>
-                <span className="thresh-val">15.0 meters</span>
+                <span className="thresh-name">
+                  Alert Level 1 (Alarm)
+                  {currentAlert.status === '1st Alarm' && <span className="active-tag">CURRENT</span>}
+                </span>
+                <span className="thresh-val">{currentStationThresholds.ALARM_1.toFixed(1)} meters</span>
               </div>
               <div className="thresh-track">
-                <div className="thresh-fill fill-level-1" style={{ width: '100%' }}></div>
+                <div className="thresh-fill fill-level-1" style={{ width: currentLevel >= currentStationThresholds.ALARM_1 ? '100%' : `${Math.max(0, (currentLevel / currentStationThresholds.ALARM_1) * 100)}%` }}></div>
               </div>
             </div>
 
             {/* Level 2 */}
-            <div className="threshold-bar-item level-2 active">
+            <div className={`threshold-bar-item level-2 ${currentAlert.status === '2nd Alarm' ? 'active' : ''}`}>
               <div className="threshold-info">
                 <span className="thresh-name">
                   Alert Level 2 (Prepare)
-                  <span className="active-tag">CURRENT</span>
+                  {currentAlert.status === '2nd Alarm' && <span className="active-tag">CURRENT</span>}
                 </span>
-                <span className="thresh-val">16.0 meters</span>
+                <span className="thresh-val">{currentStationThresholds.ALARM_2.toFixed(1)} meters</span>
               </div>
               <div className="thresh-track">
-                <div className="thresh-fill fill-level-2" style={{ width: '100%' }}></div>
+                <div className="thresh-fill fill-level-2" style={{ width: currentLevel >= currentStationThresholds.ALARM_2 ? '100%' : `${Math.max(0, ((currentLevel - currentStationThresholds.ALARM_1) / (currentStationThresholds.ALARM_2 - currentStationThresholds.ALARM_1)) * 100)}%` }}></div>
               </div>
             </div>
 
             {/* Level 3 */}
-            <div className="threshold-bar-item level-3">
+            <div className={`threshold-bar-item level-3 ${currentAlert.status === '3rd Alarm' ? 'active' : ''}`}>
               <div className="threshold-info">
-                <span className="thresh-name">Alert Level 3 (Evacuate)</span>
-                <span className="thresh-val">18.0 meters</span>
+                <span className="thresh-name">
+                  Alert Level 3 (Evacuate)
+                  {currentAlert.status === '3rd Alarm' && <span className="active-tag">CURRENT</span>}
+                </span>
+                <span className="thresh-val">{currentStationThresholds.ALARM_3.toFixed(1)} meters</span>
               </div>
               <div className="thresh-track">
-                <div className="thresh-fill fill-level-3" style={{ width: '10%' }}></div>
+                <div className="thresh-fill fill-level-3" style={{ width: currentLevel >= currentStationThresholds.ALARM_3 ? '100%' : `${Math.max(0, ((currentLevel - currentStationThresholds.ALARM_2) / (currentStationThresholds.ALARM_3 - currentStationThresholds.ALARM_2)) * 100)}%` }}></div>
               </div>
             </div>
           </div>
@@ -280,7 +398,7 @@ export default function RiverLevel({ onActionClick }) {
           </div>
 
           <div className="action-buttons-stack">
-            <button className="action-tile advisory" onClick={() => onActionClick('advisory')}>
+            <button className="action-tile advisory" onClick={() => onActionClick('advisory', { stationName: stationDisplayName, level: currentLevel, alertStatus: currentAlert.status, alertLabel: currentAlert.label })}>
               <div className="tile-icon-box blue">
                 <Megaphone size={16} />
               </div>
@@ -324,7 +442,7 @@ export default function RiverLevel({ onActionClick }) {
             <Activity size={18} className="text-brand" />
             <div>
               <h2 className="chart-heading">Hydrodynamic Telemetry & 12-Hour Forecast</h2>
-              <span className="chart-subheading">Sto. Niño Monitoring Station • Real-time stream gauge data</span>
+              <span className="chart-subheading">{stationDisplayName} • Real-time stream gauge data</span>
             </div>
           </div>
 
@@ -351,7 +469,7 @@ export default function RiverLevel({ onActionClick }) {
           <ResponsiveContainer width="100%" height={380}>
             <AreaChart
               data={chartData}
-              margin={{ top: 20, right: 35, left: 0, bottom: 10 }}
+              margin={{ top: 20, right: 65, left: 0, bottom: 10 }}
             >
               <defs>
                 {/* Observed Water Gradient */}
@@ -378,41 +496,73 @@ export default function RiverLevel({ onActionClick }) {
               />
 
               <YAxis
-                domain={[10, 24]}
-                ticks={[10, 12, 14, 16, 18, 20, 22, 24]}
+                domain={[
+                  stationDisplayName.toLowerCase().includes('rodriguez')
+                    ? 25
+                    : stationDisplayName.toLowerCase().includes('nangka')
+                    ? 14
+                    : (stationDisplayName.toLowerCase().includes('san jose') || stationDisplayName.toLowerCase().includes('montalban'))
+                    ? 18
+                    : 10,
+                  stationDisplayName.toLowerCase().includes('rodriguez')
+                    ? 35
+                    : (stationDisplayName.toLowerCase().includes('san jose') || stationDisplayName.toLowerCase().includes('montalban'))
+                    ? 28
+                    : 24
+                ]}
+                ticks={
+                  stationDisplayName.toLowerCase().includes('rodriguez')
+                    ? [25, 27, 28.8, 29.8, 30.7, 33, 35]
+                    : stationDisplayName.toLowerCase().includes('nangka')
+                    ? [14, 15, 16.5, 17.1, 17.7, 20, 22, 24]
+                    : (stationDisplayName.toLowerCase().includes('san jose') || stationDisplayName.toLowerCase().includes('montalban'))
+                    ? [18, 20, 22.4, 23.0, 23.6, 26, 28]
+                    : [10, 12, 14, 15, 16, 18, 20, 22, 24]
+                }
                 tickFormatter={(val) => `${val}m`}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
                 dx={-6}
               />
 
               <Tooltip content={<CustomTooltip />} />
 
               {/* Critical Danger Reference Areas */}
-              <ReferenceArea y1={18} y2={24} fill="#ef4444" fillOpacity={0.04} />
+              <ReferenceArea
+                y1={currentStationThresholds.ALARM_3}
+                y2={
+                  stationDisplayName.toLowerCase().includes('rodriguez')
+                    ? 35
+                    : (stationDisplayName.toLowerCase().includes('san jose') || stationDisplayName.toLowerCase().includes('montalban'))
+                    ? 28
+                    : 24
+                }
+                fill="#ef4444"
+                fillOpacity={0.04}
+              />
 
               {/* Threshold Lines */}
               <ReferenceLine
-                y={15}
+                y={currentStationThresholds.ALARM_1}
                 stroke="#ca8a04"
                 strokeDasharray="6 4"
                 strokeWidth={1.5}
-                label={{ value: 'ALARM 1 (15m)', position: 'right', fill: '#ca8a04', fontSize: 11, fontWeight: '800' }}
+                label={{ value: `ALERT 1 (${currentStationThresholds.ALARM_1.toFixed(1)}m)`, position: 'right', fill: '#ca8a04', fontSize: 10, fontWeight: '800' }}
               />
               <ReferenceLine
-                y={16}
+                y={currentStationThresholds.ALARM_2}
                 stroke="#ea580c"
                 strokeDasharray="6 4"
                 strokeWidth={2}
-                label={{ value: 'ALARM 2 (16m)', position: 'right', fill: '#ea580c', fontSize: 11, fontWeight: '800' }}
+                label={{ value: `ALARM 2 (${currentStationThresholds.ALARM_2.toFixed(1)}m)`, position: 'right', fill: '#ea580c', fontSize: 10, fontWeight: '800' }}
               />
               <ReferenceLine
-                y={18}
+                y={currentStationThresholds.ALARM_3}
                 stroke="#dc2626"
                 strokeDasharray="6 4"
                 strokeWidth={2}
-                label={{ value: 'ALARM 3 (18m)', position: 'right', fill: '#dc2626', fontSize: 11, fontWeight: '800' }}
+                label={{ value: `CRITICAL (${currentStationThresholds.ALARM_3.toFixed(1)}m)`, position: 'right', fill: '#dc2626', fontSize: 10, fontWeight: '800' }}
               />
 
               {/* Observed Fill & Line */}
