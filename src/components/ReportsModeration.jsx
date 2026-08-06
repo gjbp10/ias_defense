@@ -1,6 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw, CheckCircle, AlertTriangle, XCircle, MapPin, User, Clock, ShieldAlert } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { supabase } from '../supabaseClient';
+
+// Custom Leaflet Icons for pin markers per report
+const selectedPinIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const reportPinIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Helper component to auto-pan the map when selecting a report
+function MapRecenter({ lat, lng }) {
+  const map = useMap();
+  useEffect(() => {
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      map.setView([lat, lng], 14, { animate: true });
+    }
+  }, [lat, lng, map]);
+  return null;
+}
 
 export default function ReportsModeration() {
   const [reports, setReports] = useState([]);
@@ -92,6 +125,11 @@ export default function ReportsModeration() {
       (r.address && r.address.toLowerCase().includes(q))
     );
   });
+
+  const defaultCenter = [
+    selectedReport?.latitude || (reports.length > 0 && reports[0].latitude) || 14.6340,
+    selectedReport?.longitude || (reports.length > 0 && reports[0].longitude) || 121.0990
+  ];
 
   return (
     <div className="main-view">
@@ -238,31 +276,95 @@ export default function ReportsModeration() {
                     border: '1px solid var(--color-border)',
                     backgroundColor: '#fff',
                     fontSize: '12px',
+                    cursor: 'pointer',
                     fontWeight: '600',
-                    cursor: 'pointer'
+                    color: 'var(--text-main)'
                   }}
                 >
-                  <RefreshCw size={14} /> Refresh
+                  <RefreshCw size={14} /> Refresh Data
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Map View Section */}
+          {/* Interactive Report Location Map Section */}
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-main)' }}>
-              Report Location Map
-            </h2>
-            <div className="stations-card" style={{ padding: '0', overflow: 'hidden', height: '350px', backgroundColor: '#e5e7eb' }}>
-              <iframe
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                scrolling="no"
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(selectedReport?.longitude || 121.0955) - 0.02}%2C${(selectedReport?.latitude || 14.6585) - 0.02}%2C${(selectedReport?.longitude || 121.0955) + 0.02}%2C${(selectedReport?.latitude || 14.6585) + 0.02}&amp;layer=mapnik&amp;marker=${selectedReport?.latitude || 14.6585}%2C${selectedReport?.longitude || 121.0955}`}
-                style={{ border: 0, display: 'block' }}
-                title="Map View"
-              ></iframe>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>
+                Report Location Map ({reports.filter(r => r.latitude && r.longitude).length} Pinned)
+              </h2>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                🔴 Red Pin = Selected Report • 🔵 Blue Pins = Community Reports
+              </span>
+            </div>
+
+            <div className="stations-card" style={{ padding: 0, overflow: 'hidden', height: '420px', backgroundColor: '#e5e7eb', borderRadius: '16px', position: 'relative' }}>
+              <MapContainer
+                center={defaultCenter}
+                zoom={13}
+                style={{ height: '100%', width: '100%', zIndex: 1 }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                <MapRecenter lat={selectedReport?.latitude} lng={selectedReport?.longitude} />
+
+                {/* Render Pinned Location Markers for All Reports */}
+                {reports.map((rpt) => {
+                  const lat = parseFloat(rpt.latitude);
+                  const lng = parseFloat(rpt.longitude);
+
+                  if (isNaN(lat) || isNaN(lng)) return null;
+
+                  const isSelected = selectedReport?.id === rpt.id;
+
+                  return (
+                    <Marker
+                      key={rpt.id}
+                      position={[lat, lng]}
+                      icon={isSelected ? selectedPinIcon : reportPinIcon}
+                      eventHandlers={{
+                        click: () => setSelectedReport(rpt)
+                      }}
+                    >
+                      <Popup>
+                        <div style={{ padding: '4px', maxWidth: '200px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: rpt.status === 'Approved' ? '#dcfce7' : rpt.status === 'Resolved' ? '#e0f2fe' : rpt.status === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                            color: rpt.status === 'Approved' ? '#15803d' : rpt.status === 'Resolved' ? '#0369a1' : rpt.status === 'Rejected' ? '#dc2626' : '#b45309',
+                            marginBottom: '4px'
+                          }}>
+                            {rpt.status || 'Pending'}
+                          </span>
+                          <h4 style={{ margin: '2px 0 4px 0', fontSize: '13px', color: '#0f172a', fontWeight: '700' }}>
+                            {rpt.title || 'Report Location'}
+                          </h4>
+                          <p style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#475569' }}>
+                            📍 {rpt.address || 'Marikina City'}
+                          </p>
+                          <p style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#64748b' }}>
+                            Posted by: <strong>{maskName(rpt.posted_by)}</strong>
+                          </p>
+                          {rpt.media_url && (
+                            <img
+                              src={rpt.media_url}
+                              alt="Thumbnail"
+                              style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginTop: '4px' }}
+                            />
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                })}
+              </MapContainer>
             </div>
           </div>
 
@@ -284,7 +386,7 @@ export default function ReportsModeration() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#0284c7', backgroundColor: '#e0f2fe', padding: '4px 10px', borderRadius: '8px' }}>
                   {selectedReport.category || 'General'}
                 </span>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: selectedReport.status === 'Approved' ? '#15803d' : '#b45309', backgroundColor: selectedReport.status === 'Approved' ? '#dcfce7' : '#fef3c7', padding: '4px 10px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: selectedReport.status === 'Approved' ? '#15803d' : selectedReport.status === 'Resolved' ? '#0369a1' : selectedReport.status === 'Rejected' ? '#dc2626' : '#b45309', backgroundColor: selectedReport.status === 'Approved' ? '#dcfce7' : selectedReport.status === 'Resolved' ? '#e0f2fe' : selectedReport.status === 'Rejected' ? '#fee2e2' : '#fef3c7', padding: '4px 10px', borderRadius: '8px' }}>
                   {selectedReport.status || 'Pending'}
                 </span>
               </div>
@@ -331,6 +433,12 @@ export default function ReportsModeration() {
                   <User size={16} color="#64748b" />
                   <span>Posted by: <strong>{maskName(selectedReport.posted_by)}</strong></span>
                 </div>
+                {selectedReport.latitude && selectedReport.longitude && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#0284c7' }}>
+                    <MapPin size={14} />
+                    <span>GPS Coordinates: {parseFloat(selectedReport.latitude).toFixed(4)}, {parseFloat(selectedReport.longitude).toFixed(4)}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8' }}>
                   <Clock size={14} />
                   <span>{new Date(selectedReport.created_at || Date.now()).toLocaleString()}</span>
@@ -419,4 +527,3 @@ export default function ReportsModeration() {
     </div>
   );
 }
-
