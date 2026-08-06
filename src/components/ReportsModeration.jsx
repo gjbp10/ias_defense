@@ -1,189 +1,456 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Media;
+using Microsoft.Maui.Controls;
+using RescuAR.App.Models;
+using RescuAR.App.Services.Reports;
 
-export default function ReportsModeration() {
-  const [lastUpdated] = useState('June 18, 2026 • 08:42 AM');
-
-  // Dummy data matching the screenshot
-  const reports = [
+namespace RescuAR.App.ViewModels.Reports
+{
+    public partial class ReportsViewModel : ObservableObject
     {
-      id: 1,
-      report: 'Flooded Street',
-      user: 'John Doe',
-      severity: 'High',
-      status: 'Pending'
+        private readonly CommunityReportService _reportService;
+        private readonly IOsmGeocodingService _osmService;
+
+        [ObservableProperty]
+        private ObservableCollection<CommunityReport> reports = new();
+
+        [ObservableProperty]
+        private string searchQuery = string.Empty;
+
+        [ObservableProperty]
+        private string selectedFilter = "Newest first";
+
+        [ObservableProperty]
+        private List<string> filterOptions = new() { "Newest first", "Oldest first", "Nearest to me" };
+
+        [ObservableProperty]
+        private bool isRefreshing;
+
+        // Modal Visibility
+        [ObservableProperty]
+        private bool isCreateModalVisible;
+
+        [ObservableProperty]
+        private bool isSuccessModalVisible;
+
+        [ObservableProperty]
+        private bool isMapPickerVisible;
+
+        // Create Report Form Fields
+        [ObservableProperty]
+        private string newReportTitle = string.Empty;
+
+        [ObservableProperty]
+        private string newReportDescription = string.Empty;
+
+        [ObservableProperty]
+        private string newReportCategory = "Flood Warning";
+
+        [ObservableProperty]
+        private List<string> categoryOptions = new()
+        {
+            "Flood Warning",
+            "Rescue Request",
+            "Road Hazard",
+            "Power Outage",
+            "General Alert"
+        };
+
+        [ObservableProperty]
+        private string newReportAddress = "41 C. Benitez St., MBLA Court, Malanday, Marikina City";
+
+        [ObservableProperty]
+        private double newReportLatitude = 14.6585;
+
+        [ObservableProperty]
+        private double newReportLongitude = 121.0955;
+
+        [ObservableProperty]
+        private string newReportMediaUrl = string.Empty;
+
+        [ObservableProperty]
+        private string newReportMediaType = "Image"; // Image or Video
+
+        [ObservableProperty]
+        private bool newReportHasMedia;
+
+        [ObservableProperty]
+        private bool newReportAllowComments = true;
+
+        [ObservableProperty]
+        private bool isFetchingLocation;
+
+        // Map Picker Search Query & OSM Results
+        [ObservableProperty]
+        private string mapSearchQuery = string.Empty;
+
+        [ObservableProperty]
+        private bool isSearchingOsm;
+
+        [ObservableProperty]
+        private ObservableCollection<OsmSearchResult> osmSearchResults = new();
+
+        [ObservableProperty]
+        private List<string> presetLocations = new()
+        {
+            "41 C. Benitez St., MBLA Court, Malanday, Marikina City",
+            "J.P. Rizal St. cor. Malaya St., Malanday, Marikina City",
+            "Malaya Street, Barangay Malanday, Marikina City",
+            "H. Bautista Elementary School, Concepcion Uno, Marikina City",
+            "Marikina Sports Center, Sta. Elena, Marikina City",
+            "Nangka Elementary School, Nangka, Marikina City",
+            "Sto. Niño National High School, Sto. Niño, Marikina City"
+        };
+
+        public ReportsViewModel() : this(new CommunityReportService(), new OsmGeocodingService())
+        {
+        }
+
+        public ReportsViewModel(CommunityReportService reportService, IOsmGeocodingService osmService)
+        {
+            _reportService = reportService;
+            _osmService = osmService;
+            _ = LoadReportsAsync();
+        }
+
+        partial void OnSearchQueryChanged(string value)
+        {
+            _ = LoadReportsAsync();
+        }
+
+        partial void OnSelectedFilterChanged(string value)
+        {
+            _ = LoadReportsAsync();
+        }
+
+        partial void OnMapSearchQueryChanged(string value)
+        {
+            _ = SearchOsmLocationsAsync(value);
+        }
+
+        private async Task SearchOsmLocationsAsync(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+            {
+                OsmSearchResults.Clear();
+                IsSearchingOsm = false;
+                return;
+            }
+
+            IsSearchingOsm = true;
+            try
+            {
+                var list = await _osmService.SearchLocationsAsync(query);
+                OsmSearchResults = new ObservableCollection<OsmSearchResult>(list);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OSM Search Exception: {ex.Message}");
+            }
+            finally
+            {
+                IsSearchingOsm = false;
+            }
+        }
+
+        [RelayCommand]
+        public async Task LoadReportsAsync()
+        {
+            IsRefreshing = true;
+            try
+            {
+                var list = await _reportService.GetReportsAsync(SearchQuery, SelectedFilter);
+                Reports = new ObservableCollection<CommunityReport>(list);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading reports: {ex.Message}");
+            }
+            finally
+            {
+                IsRefreshing = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task OpenCreateModalAsync()
+        {
+            // Reset fields
+            NewReportTitle = string.Empty;
+            NewReportDescription = string.Empty;
+            NewReportCategory = "Flood Warning";
+            NewReportMediaUrl = string.Empty;
+            NewReportHasMedia = false;
+            NewReportAllowComments = true;
+            IsCreateModalVisible = true;
+
+            // Automatically attempt to fetch current GPS location
+            await FetchUserLocationAsync();
+        }
+
+        [RelayCommand]
+        private void CloseCreateModal()
+        {
+            IsCreateModalVisible = false;
+        }
+
+        [RelayCommand]
+        private async Task FetchUserLocationAsync()
+        {
+            IsFetchingLocation = true;
+            try
+            {
+                var location = await Geolocation.Default.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5)));
+                if (location != null)
+                {
+                    NewReportLatitude = location.Latitude;
+                    NewReportLongitude = location.Longitude;
+
+                    var placemarks = await Geocoding.Default.GetPlacemarksAsync(location);
+                    var placemark = placemarks?.FirstOrDefault();
+                    if (placemark != null)
+                    {
+                        var parts = new List<string>();
+                        if (!string.IsNullOrWhiteSpace(placemark.FeatureName)) parts.Add(placemark.FeatureName);
+                        if (!string.IsNullOrWhiteSpace(placemark.Thoroughfare)) parts.Add(placemark.Thoroughfare);
+                        if (!string.IsNullOrWhiteSpace(placemark.SubLocality)) parts.Add(placemark.SubLocality);
+                        if (!string.IsNullOrWhiteSpace(placemark.Locality)) parts.Add(placemark.Locality);
+
+                        if (parts.Count > 0)
+                        {
+                            NewReportAddress = string.Join(", ", parts);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Location fetch error: {ex.Message}");
+                if (string.IsNullOrWhiteSpace(NewReportAddress))
+                {
+                    NewReportAddress = "41 C. Benitez St., MBLA Court, Malanday, Marikina City";
+                }
+            }
+            finally
+            {
+                IsFetchingLocation = false;
+            }
+        }
+
+        private FileResult? _selectedMediaFile;
+
+        [RelayCommand]
+        private async Task PickMediaAsync()
+        {
+            try
+            {
+                var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
+                if (status != PermissionStatus.Granted)
+                {
+                    status = await Permissions.RequestAsync<Permissions.Camera>();
+                }
+
+                if (status == PermissionStatus.Granted)
+                {
+                    if (MediaPicker.Default.IsCaptureSupported)
+                    {
+                        var photo = await MediaPicker.Default.CapturePhotoAsync();
+                        if (photo != null)
+                        {
+                            _selectedMediaFile = photo;
+                            NewReportMediaUrl = photo.FullPath;
+                            NewReportMediaType = "Image";
+                            NewReportHasMedia = true;
+                        }
+                    }
+                    else
+                    {
+                        await Shell.Current.DisplayAlertAsync("Camera Unavailable", "Camera capture is not supported on this device.", "OK");
+                    }
+                }
+                else
+                {
+                    await Shell.Current.DisplayAlertAsync("Permission Denied", "Camera permission is required to take photos.", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Media pick error: {ex.Message}");
+                await Shell.Current.DisplayAlertAsync("Camera Error", ex.Message, "OK");
+            }
+        }
+
+        [RelayCommand]
+        private void RemoveMedia()
+        {
+            _selectedMediaFile = null;
+            NewReportMediaUrl = string.Empty;
+            NewReportHasMedia = false;
+        }
+
+        [RelayCommand]
+        private void OpenMapPicker()
+        {
+            MapSearchQuery = string.Empty;
+            OsmSearchResults.Clear();
+            IsMapPickerVisible = true;
+        }
+
+        [RelayCommand]
+        private void CloseMapPicker()
+        {
+            IsMapPickerVisible = false;
+        }
+
+        [RelayCommand]
+        private void SelectOsmLocation(OsmSearchResult item)
+        {
+            if (item != null)
+            {
+                NewReportAddress = item.DisplayName;
+                NewReportLatitude = item.Latitude;
+                NewReportLongitude = item.Longitude;
+                IsMapPickerVisible = false;
+            }
+        }
+
+        [RelayCommand]
+        private void SelectPresetLocation(string location)
+        {
+            if (!string.IsNullOrWhiteSpace(location))
+            {
+                NewReportAddress = location;
+                IsMapPickerVisible = false;
+            }
+        }
+
+        [RelayCommand]
+        private void ConfirmCustomMapLocation()
+        {
+            if (!string.IsNullOrWhiteSpace(MapSearchQuery))
+            {
+                NewReportAddress = MapSearchQuery.Trim();
+            }
+            IsMapPickerVisible = false;
+        }
+
+        [RelayCommand]
+        private async Task SubmitReportAsync()
+        {
+            if (string.IsNullOrWhiteSpace(NewReportTitle))
+            {
+                await Shell.Current.DisplayAlertAsync("Required Field", "Please enter a title for your community report.", "OK");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(NewReportDescription))
+            {
+                await Shell.Current.DisplayAlertAsync("Required Field", "Please enter a description of the incident.", "OK");
+                return;
+            }
+
+            string publicMediaUrl = string.Empty;
+
+            if (_selectedMediaFile != null)
+            {
+                try
+                {
+                    using var stream = await _selectedMediaFile.OpenReadAsync();
+                    var uploadedUrl = await RescuAR.App.Services.Cloud.CloudinaryService.UploadImageStreamAsync(stream, _selectedMediaFile.FileName);
+                    if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                    {
+                        publicMediaUrl = uploadedUrl;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Stream upload error: {ex.Message}");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(publicMediaUrl) && !string.IsNullOrWhiteSpace(NewReportMediaUrl))
+            {
+                var uploadedUrl = await RescuAR.App.Services.Cloud.CloudinaryService.UploadImageAsync(NewReportMediaUrl);
+                if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                {
+                    publicMediaUrl = uploadedUrl;
+                }
+            }
+
+            var report = new CommunityReport
+            {
+                Title = NewReportTitle.Trim(),
+                Description = NewReportDescription.Trim(),
+                Category = NewReportCategory,
+                Address = string.IsNullOrWhiteSpace(NewReportAddress) ? "Marikina City" : NewReportAddress.Trim(),
+                Latitude = NewReportLatitude,
+                Longitude = NewReportLongitude,
+                DistanceText = "50 meters away",
+                PostedBy = "Aubrey T.",
+                CreatedAt = DateTime.UtcNow,
+                MediaUrl = publicMediaUrl,
+                MediaType = NewReportMediaType,
+                HasMedia = !string.IsNullOrWhiteSpace(publicMediaUrl),
+                AllowComments = NewReportAllowComments
+            };
+
+            await _reportService.AddReportAsync(report);
+
+            // Hide create modal and show success modal
+            IsCreateModalVisible = false;
+            IsSuccessModalVisible = true;
+
+            await LoadReportsAsync();
+
+            // Auto dismiss success modal after 2 seconds
+            await Task.Delay(2000);
+            IsSuccessModalVisible = false;
+        }
+
+        [RelayCommand]
+        private void CloseSuccessModal()
+        {
+            IsSuccessModalVisible = false;
+        }
+
+        [RelayCommand]
+        private async Task ViewReportDetailsAsync(CommunityReport report)
+        {
+            if (report == null) return;
+            await Shell.Current.GoToAsync($"ReportDetails?ReportId={report.Id}");
+        }
+
+        [RelayCommand]
+        private async Task ToggleLikeAsync(CommunityReport report)
+        {
+            if (report == null) return;
+
+            if (report.IsLikedByCurrentUser)
+            {
+                report.IsLikedByCurrentUser = false;
+                report.LikeCount = Math.Max(0, report.LikeCount - 1);
+            }
+            else
+            {
+                report.IsLikedByCurrentUser = true;
+                report.LikeCount++;
+            }
+
+            await _reportService.ToggleLikeAsync(report.Id);
+
+            var index = Reports.IndexOf(report);
+            if (index >= 0)
+            {
+                Reports[index] = null!;
+                Reports[index] = report;
+            }
+        }
     }
-  ];
-
-  return (
-    <div className="main-view">
-      {/* View Header */}
-      <div className="view-header">
-        <div className="view-title-container">
-          <h1>Reports Moderation</h1>
-          <span className="view-subtitle">Last updated: {lastUpdated}</span>
-        </div>
-      </div>
-
-      <div className="stations-split-layout" style={{ marginTop: '24px', alignItems: 'flex-start' }}>
-        
-        {/* Left Column: Queue & Map */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          
-          {/* Reports Queue Section */}
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-main)' }}>
-              Reports Queue
-            </h2>
-            
-            {/* Search Bar */}
-            <div style={{ marginBottom: '24px' }}>
-              <input 
-                type="text" 
-                placeholder="Search for a report..." 
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: '#fff',
-                  fontSize: '14px',
-                  color: 'var(--text-main)',
-                  outline: 'none',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                }}
-              />
-            </div>
-
-            {/* Table Card */}
-            <div className="stations-card" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div className="table-container" style={{ margin: '0' }}>
-                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid var(--color-border)' }}>
-                    <tr>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Report</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>User</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Severity</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-main)', fontSize: '13px' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.map((report) => (
-                      <tr key={report.id} className="table-row-hover" style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-main)' }}>{report.report}</td>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-main)' }}>{report.user}</td>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600', color: report.severity === 'High' ? '#dc2626' : 'inherit' }}>
-                          {report.severity}
-                        </td>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600', color: report.status === 'Pending' ? '#0284c7' : 'inherit' }}>
-                          {report.status}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                
-                {/* Empty space to match the height in the screenshot */}
-                <div style={{ height: '140px' }}></div>
-              </div>
-
-              {/* Pagination Footer */}
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                padding: '16px 24px', 
-                borderTop: '1px solid var(--color-border)',
-                backgroundColor: '#fff'
-              }}>
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>1 of 1 record</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{ 
-                    padding: '6px', 
-                    borderRadius: '6px', 
-                    border: '1px solid var(--color-border)', 
-                    backgroundColor: '#fff', 
-                    color: '#d1d5db',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'not-allowed'
-                  }}>
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button style={{ 
-                    padding: '4px 16px', 
-                    borderRadius: '6px', 
-                    border: '1px solid var(--color-border)', 
-                    backgroundColor: '#fff', 
-                    color: 'var(--text-muted)',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}>
-                    1
-                  </button>
-                  <button style={{ 
-                    padding: '6px', 
-                    borderRadius: '6px', 
-                    border: '1px solid var(--color-border)', 
-                    backgroundColor: '#fff', 
-                    color: '#d1d5db',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'not-allowed'
-                  }}>
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Map View Section */}
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-main)' }}>
-              Map View
-            </h2>
-            <div className="stations-card" style={{ padding: '0', overflow: 'hidden', height: '400px', backgroundColor: '#e5e7eb' }}>
-              <iframe 
-                width="100%" 
-                height="100%" 
-                frameBorder="0" 
-                scrolling="no" 
-                marginHeight="0" 
-                marginWidth="0" 
-                src="https://www.openstreetmap.org/export/embed.html?bbox=121.07%2C14.62%2C121.12%2C14.66&amp;layer=mapnik" 
-                style={{ border: 0, display: 'block' }}
-                title="Map View"
-              ></iframe>
-            </div>
-          </div>
-          
-        </div>
-
-        {/* Right Column: Report Details */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>
-              Report Details
-            </h2>
-            <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: '#f8fafc', fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-              <RefreshCw size={14} />
-              <span>Refresh</span>
-            </button>
-          </div>
-          
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '600px' }}>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#9ca3af' }}>
-              Select a report first to view details.
-            </span>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  );
 }
