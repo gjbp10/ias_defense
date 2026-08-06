@@ -1,29 +1,31 @@
-import React, { useState } from 'react';
-import { 
-  RefreshCw, 
-  ArrowUpRight, 
-  ChevronRight, 
-  TrendingUp, 
-  AlertTriangle, 
-  ShieldAlert, 
-  Megaphone, 
-  Bell, 
-  Compass, 
-  Waves, 
-  Clock, 
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+import { calculateAlertStatus } from '../utils/waterLevelUtils';
+import {
+  RefreshCw,
+  ArrowUpRight,
+  ChevronRight,
+  TrendingUp,
+  AlertTriangle,
+  ShieldAlert,
+  Megaphone,
+  Bell,
+  Compass,
+  Waves,
+  Clock,
   Activity,
   Zap,
   Info
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
+import {
+  ResponsiveContainer,
   AreaChart,
   Area,
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ReferenceLine,
   ReferenceArea
 } from 'recharts';
@@ -58,20 +60,55 @@ const MOCK_DATA_7D = [
 export default function RiverLevel({ onActionClick }) {
   const [timeRange, setTimeRange] = useState('24h');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState('June 18, 2026 • 08:42 AM');
+  const [lastUpdated, setLastUpdated] = useState('Loading live data...');
+  const [currentLevel, setCurrentLevel] = useState(16.2);
+  const [currentAlert, setCurrentAlert] = useState(calculateAlertStatus(16.2));
+
+  const fetchStoNinoData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('monitoring_stations')
+        .select('*')
+        .ilike('station_name', '%Sto%')
+        .single();
+
+      if (data) {
+        const level = Number(data.level);
+        setCurrentLevel(level);
+        setCurrentAlert(calculateAlertStatus(level, data.station_name));
+        
+        const latestTimestamp = data.updated_at ? new Date(data.updated_at) : new Date();
+        const dateStr = latestTimestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = latestTimestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        setLastUpdated(`${dateStr} • ${timeStr}`);
+      }
+    } catch (err) {
+      console.error('Error fetching Sto. Niño station telemetry:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStoNinoData();
+
+    const channel = supabase
+      .channel('river-level-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_stations' }, () => {
+        fetchStoNinoData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const chartData = timeRange === '24h' ? MOCK_DATA_24H : MOCK_DATA_7D;
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    fetchStoNinoData().finally(() => {
       setIsRefreshing(false);
-      const now = new Date();
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      const dateStr = now.toLocaleDateString('en-US', options);
-      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      setLastUpdated(`${dateStr} • ${timeStr}`);
-    }, 800);
+    });
   };
 
   // Glassmorphic Custom Tooltip for Recharts
@@ -100,7 +137,7 @@ export default function RiverLevel({ onActionClick }) {
             <Clock size={12} />
             <span>Time Stamp: {label}</span>
           </div>
-          
+
           <div className="tooltip-metrics">
             {obsVal !== undefined && obsVal !== null && (
               <div className="tooltip-row observed">
@@ -119,7 +156,7 @@ export default function RiverLevel({ onActionClick }) {
             )}
           </div>
 
-          <div 
+          <div
             className="tooltip-footer-badge"
             style={{ color: statusColor, backgroundColor: `${statusColor}15`, borderColor: `${statusColor}30` }}
           >
@@ -147,8 +184,8 @@ export default function RiverLevel({ onActionClick }) {
         </div>
 
         <div className="header-actions">
-          <button 
-            className="refresh-btn" 
+          <button
+            className="refresh-btn"
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
@@ -160,29 +197,32 @@ export default function RiverLevel({ onActionClick }) {
 
       {/* Top 3 Cards Grid */}
       <div className="river-metrics-grid">
-        
+
         {/* Card 1: Current Level */}
         <div className="river-card current-level-card">
           <div className="card-top-label">
             <Waves size={16} className="text-brand" />
             <span>CURRENT WATER LEVEL</span>
           </div>
-          
+
           <div className="level-hero-group">
             <div className="hero-number-wrapper">
-              <span className="hero-number">16.2</span>
+              <span className="hero-number">{currentLevel.toFixed(1)}</span>
               <span className="hero-unit">meters</span>
             </div>
 
             <div className="trend-chip rising">
               <ArrowUpRight size={16} />
-              <span>Rising (+0.3 m/hr)</span>
+              <span>Sto. Niño Gauge</span>
             </div>
           </div>
 
-          <div className="level-status-pill level-2">
+          <div 
+            className="level-status-pill"
+            style={{ backgroundColor: `${currentAlert.color}15`, color: currentAlert.color, borderColor: `${currentAlert.color}40`, fontWeight: '700' }}
+          >
             <AlertTriangle size={14} />
-            <span>ALARM LEVEL 2 • PREPARATION</span>
+            <span>{currentAlert.label.toUpperCase()}</span>
           </div>
         </div>
 
@@ -290,13 +330,13 @@ export default function RiverLevel({ onActionClick }) {
 
           <div className="chart-controls">
             <div className="pill-selector">
-              <button 
+              <button
                 className={`pill-btn ${timeRange === '24h' ? 'active' : ''}`}
                 onClick={() => setTimeRange('24h')}
               >
                 24-Hour View
               </button>
-              <button 
+              <button
                 className={`pill-btn ${timeRange === '7d' ? 'active' : ''}`}
                 onClick={() => setTimeRange('7d')}
               >
@@ -316,28 +356,28 @@ export default function RiverLevel({ onActionClick }) {
               <defs>
                 {/* Observed Water Gradient */}
                 <linearGradient id="gradientObserved" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0.02}/>
+                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0.02} />
                 </linearGradient>
 
                 {/* Predicted Water Gradient */}
                 <linearGradient id="gradientPredicted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0.01}/>
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0.01} />
                 </linearGradient>
               </defs>
-              
+
               <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" />
-              
-              <XAxis 
-                dataKey="time" 
-                tickLine={false} 
+
+              <XAxis
+                dataKey="time"
+                tickLine={false}
                 axisLine={{ stroke: '#cbd5e1' }}
                 tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
                 dy={8}
               />
-              
-              <YAxis 
+
+              <YAxis
                 domain={[10, 24]}
                 ticks={[10, 12, 14, 16, 18, 20, 22, 24]}
                 tickFormatter={(val) => `${val}m`}
@@ -346,33 +386,33 @@ export default function RiverLevel({ onActionClick }) {
                 tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
                 dx={-6}
               />
-              
+
               <Tooltip content={<CustomTooltip />} />
-              
+
               {/* Critical Danger Reference Areas */}
               <ReferenceArea y1={18} y2={24} fill="#ef4444" fillOpacity={0.04} />
-              
+
               {/* Threshold Lines */}
-              <ReferenceLine 
-                y={15} 
-                stroke="#ca8a04" 
-                strokeDasharray="6 4" 
+              <ReferenceLine
+                y={15}
+                stroke="#ca8a04"
+                strokeDasharray="6 4"
                 strokeWidth={1.5}
-                label={{ value: 'ALARM 1 (15m)', position: 'right', fill: '#ca8a04', fontSize: 11, fontWeight: '800' }} 
+                label={{ value: 'ALARM 1 (15m)', position: 'right', fill: '#ca8a04', fontSize: 11, fontWeight: '800' }}
               />
-              <ReferenceLine 
-                y={16} 
-                stroke="#ea580c" 
-                strokeDasharray="6 4" 
+              <ReferenceLine
+                y={16}
+                stroke="#ea580c"
+                strokeDasharray="6 4"
                 strokeWidth={2}
-                label={{ value: 'ALARM 2 (16m)', position: 'right', fill: '#ea580c', fontSize: 11, fontWeight: '800' }} 
+                label={{ value: 'ALARM 2 (16m)', position: 'right', fill: '#ea580c', fontSize: 11, fontWeight: '800' }}
               />
-              <ReferenceLine 
-                y={18} 
-                stroke="#dc2626" 
-                strokeDasharray="6 4" 
+              <ReferenceLine
+                y={18}
+                stroke="#dc2626"
+                strokeDasharray="6 4"
                 strokeWidth={2}
-                label={{ value: 'ALARM 3 (18m)', position: 'right', fill: '#dc2626', fontSize: 11, fontWeight: '800' }} 
+                label={{ value: 'ALARM 3 (18m)', position: 'right', fill: '#dc2626', fontSize: 11, fontWeight: '800' }}
               />
 
               {/* Observed Fill & Line */}
@@ -389,10 +429,10 @@ export default function RiverLevel({ onActionClick }) {
               />
 
               {/* Predicted Forecast Fill & Line */}
-              <Area 
-                type="monotone" 
-                dataKey="predicted" 
-                stroke="#f97316" 
+              <Area
+                type="monotone"
+                dataKey="predicted"
+                stroke="#f97316"
                 strokeWidth={2.5}
                 strokeDasharray="6 6"
                 fillOpacity={1}
