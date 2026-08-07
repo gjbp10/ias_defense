@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-import { supabase } from './supabaseClient';
+import React, { useState } from 'react';
 
 // Core Layout & Dashboards
 import Header from './components/Header';
@@ -33,30 +31,8 @@ import {
   PredictModal
 } from './components/Modals';
 
-// Auth Components
-import Login from './components/Login';
-import Register from './components/Register';
-
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isLoginView, setIsLoginView] = useState(true);
+export default function App({ session }) {
   const [activeView, setActiveView] = useState('monitoring-stations');
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsAuthLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Modal states
   const [isAdvisoryOpen, setIsAdvisoryOpen] = useState(false);
@@ -89,9 +65,9 @@ export default function App() {
       case 'community-reports-moderation':
         return <ReportsModeration />;
       case 'community-residents':
-        return <ResidentsDirectory />;
+        return <div style={{ padding: '20px' }}>Residents Directory View (Placeholder)</div>;
       case 'community-sms-parser':
-        return <SmsParserConsole />;
+        return <div style={{ padding: '20px' }}>SMS Parser Console View (Placeholder)</div>;
       case 'community-alerts':
         return <BroadcastLogs />;
       case 'content-advisories':
@@ -112,24 +88,10 @@ export default function App() {
     }
   };
 
-  if (isAuthLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-app)' }}>
-        <Loader2 size={32} className="spin-icon" color="var(--color-brand)" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return isLoginView 
-      ? <Login onSwitchToRegister={() => setIsLoginView(false)} />
-      : <Register onSwitchToLogin={() => setIsLoginView(true)} />;
-  }
-
   return (
     <div className="app-container">
       {/* Top Header */}
-      <Header user={session.user} />
+      <Header session={session} />
 
       {/* Main Layout Content */}
       <div className="app-content">

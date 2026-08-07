@@ -29,8 +29,6 @@ export default function Advisories() {
   const [severityFilter, setSeverityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isRefreshSpinning, setIsRefreshSpinning] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -159,18 +157,6 @@ export default function Advisories() {
     const matchesStatus = statusFilter ? adv.status === statusFilter : true;
     return matchesSearch && matchesCategory && matchesSeverity && matchesStatus;
   });
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, categoryFilter, severityFilter, statusFilter]);
-
-  // Pagination logic
-  const totalPages = Math.max(1, Math.ceil(filteredAdvisories.length / ITEMS_PER_PAGE));
-  const paginatedAdvisories = filteredAdvisories.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
 
   const getSeverityColor = (sev) => {
     switch (sev) {
@@ -426,7 +412,7 @@ export default function Advisories() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedAdvisories.map((adv) => {
+                  filteredAdvisories.map((adv) => {
                     const sevStyle = getSeverityColor(adv.severity);
                     const statusStyle = getStatusColor(adv.status);
                     return (
@@ -472,31 +458,11 @@ export default function Advisories() {
 
           {/* Pagination */}
           <div className="table-footer">
-            <span>{paginatedAdvisories.length} of {filteredAdvisories.length} records</span>
+            <span>{filteredAdvisories.length} of {advisories.length} records</span>
             <div className="pagination-controls">
-              <button
-                className="pagination-btn"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              >
-                <ChevronLeft size={14} />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="pagination-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              >
-                <ChevronRight size={14} />
-              </button>
+              <button className="pagination-btn" disabled><ChevronLeft size={14} /></button>
+              <button className="pagination-btn active">1</button>
+              <button className="pagination-btn" disabled><ChevronRight size={14} /></button>
             </div>
           </div>
         </div>
