@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 // Core Layout & Dashboards
 import Header from './components/Header';
@@ -31,8 +33,30 @@ import {
   PredictModal
 } from './components/Modals';
 
+// Auth Components
+import Login from './components/Login';
+import Register from './components/Register';
+
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isLoginView, setIsLoginView] = useState(true);
   const [activeView, setActiveView] = useState('monitoring-stations');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Modal states
   const [isAdvisoryOpen, setIsAdvisoryOpen] = useState(false);
@@ -88,10 +112,24 @@ export default function App() {
     }
   };
 
+  if (isAuthLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-app)' }}>
+        <Loader2 size={32} className="spin-icon" color="var(--color-brand)" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return isLoginView 
+      ? <Login onSwitchToRegister={() => setIsLoginView(false)} />
+      : <Register onSwitchToLogin={() => setIsLoginView(true)} />;
+  }
+
   return (
     <div className="app-container">
       {/* Top Header */}
-      <Header />
+      <Header user={session.user} />
 
       {/* Main Layout Content */}
       <div className="app-content">
