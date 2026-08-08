@@ -319,7 +319,7 @@ export default function MonitoringStations() {
                         }}>
                           <p style={{ fontWeight: '700', color: 'var(--text-main)' }}>{payload[0].payload.name}</p>
                           <p style={{ color: '#3b82f6', fontWeight: '600', marginTop: '4px' }}>
-                            Level: {payload[0].value.toFixed(1)} m
+                            Level: {Number(payload[0].value).toFixed(2)} m
                           </p>
                         </div>
                       );
@@ -408,7 +408,7 @@ export default function MonitoringStations() {
                       style={is3rdAlarm ? { backgroundColor: '#fef2f2' } : {}}
                     >
                       <td style={{ fontWeight: '600', color: is3rdAlarm ? '#b91c1c' : 'var(--text-main)' }}>{station.name}</td>
-                      <td style={{ fontWeight: '600', color: is3rdAlarm ? '#dc2626' : 'inherit' }}>{station.level.toFixed(1)} m</td>
+                      <td style={{ fontWeight: '600', color: is3rdAlarm ? '#dc2626' : 'inherit' }}>{Number(station.level).toFixed(2)} m</td>
                       <td>
                         <span 
                           className="status-badge-pill"

@@ -323,7 +323,7 @@ export default function RiverLevel({ onActionClick }) {
 
           <div className="level-hero-group">
             <div className="hero-number-wrapper">
-              <span className="hero-number">{currentLevel.toFixed(1)}</span>
+              <span className="hero-number">{Number(currentLevel).toFixed(2)}</span>
               <span className="hero-unit">meters</span>
             </div>
 
@@ -357,7 +357,7 @@ export default function RiverLevel({ onActionClick }) {
                   Alert Level 1 (Alarm)
                   {currentAlert.status === '1st Alarm' && <span className="active-tag">CURRENT</span>}
                 </span>
-                <span className="thresh-val">{currentStationThresholds.ALARM_1.toFixed(1)} meters</span>
+                <span className="thresh-val">{currentStationThresholds.ALARM_1.toFixed(2)} meters</span>
               </div>
               <div className="thresh-track">
                 <div className="thresh-fill fill-level-1" style={{ width: currentLevel >= currentStationThresholds.ALARM_1 ? '100%' : `${Math.max(0, (currentLevel / currentStationThresholds.ALARM_1) * 100)}%` }}></div>
@@ -371,7 +371,7 @@ export default function RiverLevel({ onActionClick }) {
                   Alert Level 2 (Prepare)
                   {currentAlert.status === '2nd Alarm' && <span className="active-tag">CURRENT</span>}
                 </span>
-                <span className="thresh-val">{currentStationThresholds.ALARM_2.toFixed(1)} meters</span>
+                <span className="thresh-val">{currentStationThresholds.ALARM_2.toFixed(2)} meters</span>
               </div>
               <div className="thresh-track">
                 <div className="thresh-fill fill-level-2" style={{ width: currentLevel >= currentStationThresholds.ALARM_2 ? '100%' : `${Math.max(0, ((currentLevel - currentStationThresholds.ALARM_1) / (currentStationThresholds.ALARM_2 - currentStationThresholds.ALARM_1)) * 100)}%` }}></div>
@@ -385,7 +385,7 @@ export default function RiverLevel({ onActionClick }) {
                   Alert Level 3 (Evacuate)
                   {currentAlert.status === '3rd Alarm' && <span className="active-tag">CURRENT</span>}
                 </span>
-                <span className="thresh-val">{currentStationThresholds.ALARM_3.toFixed(1)} meters</span>
+                <span className="thresh-val">{currentStationThresholds.ALARM_3.toFixed(2)} meters</span>
               </div>
               <div className="thresh-track">
                 <div className="thresh-fill fill-level-3" style={{ width: currentLevel >= currentStationThresholds.ALARM_3 ? '100%' : `${Math.max(0, ((currentLevel - currentStationThresholds.ALARM_2) / (currentStationThresholds.ALARM_3 - currentStationThresholds.ALARM_2)) * 100)}%` }}></div>
