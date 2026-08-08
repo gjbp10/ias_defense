@@ -65,9 +65,16 @@ export default function MonitoringStations() {
         });
         setStations(formattedStations);
 
-        const latestTimestamp = data[0]?.updated_at ? new Date(data[0].updated_at) : new Date();
-        const dateStr = latestTimestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const timeStr = latestTimestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        // Find the maximum updated_at timestamp from all stations
+        const latestTimestamp = data.reduce((latest, item) => {
+          if (!item.updated_at) return latest;
+          const itemTime = new Date(item.updated_at).getTime();
+          return itemTime > latest ? itemTime : latest;
+        }, 0);
+
+        const dateObj = latestTimestamp > 0 ? new Date(latestTimestamp) : new Date();
+        const dateStr = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         setLastUpdated(`${dateStr} • ${timeStr}`);
       }
     } catch (err) {
@@ -93,8 +100,14 @@ export default function MonitoringStations() {
     };
   }, []);
 
-  const handleRefresh = () => {
-    fetchStationsFromSupabase();
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchStationsFromSupabase();
+    } finally {
+      // Ensure minimum spinning animation duration so user gets immediate visual feedback
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
   };
 
   // Sorting Handler

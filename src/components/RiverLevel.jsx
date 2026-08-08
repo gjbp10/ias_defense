@@ -145,11 +145,15 @@ export default function RiverLevel({ onActionClick }) {
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    loadData().finally(() => {
-      setIsRefreshing(false);
-    });
+    try {
+      await loadData();
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
+    }
   };
 
   // Glassmorphic Custom Tooltip for Recharts

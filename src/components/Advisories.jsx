@@ -331,7 +331,7 @@ export default function Advisories() {
       <div className="view-header">
         <div className="view-title-container">
           <h1>Advisories</h1>
-          <span className="view-subtitle">Connected to Supabase • Live Public Emergency Broadcasting</span>
+          <span className="view-subtitle">Live Public Emergency Broadcasting</span>
         </div>
         <button className="btn-refresh" onClick={handleRefresh}>
           <RefreshCw size={13} className={isRefreshSpinning ? 'spin-icon' : ''} />

@@ -196,10 +196,9 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
           <div>
             <label className="form-label">Category</label>
             <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="Flood Risk">Flood Risk</option>
-              <option value="Weather">Weather</option>
-              <option value="Evacuation">Evacuation</option>
-              <option value="General">General</option>
+              <option value="Flood Risk">Flood</option>
+              <option value="Weather">Monitoring</option>
+              <option value="Evacuation">Weather</option>
             </select>
           </div>
           <div>

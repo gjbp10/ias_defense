@@ -139,7 +139,7 @@ export default function Sidebar({ activeView, onViewChange }) {
                 className={`sidebar-link ${activeView === 'content-news' ? 'active' : ''}`}
                 onClick={() => onViewChange('content-news')}
               >
-                <span>Evacuation Centers</span>
+                <span></span>
               </div>
               <div 
                 className={`sidebar-link ${activeView === 'content-hotlines' ? 'active' : ''}`}
@@ -170,13 +170,13 @@ export default function Sidebar({ activeView, onViewChange }) {
                 className={`sidebar-link ${activeView === 'system-settings' ? 'active' : ''}`}
                 onClick={() => onViewChange('system-settings')}
               >
-                <span>Configuration</span>
+                <span></span>
               </div>
               <div 
                 className={`sidebar-link ${activeView === 'system-logs' ? 'active' : ''}`}
                 onClick={() => onViewChange('system-logs')}
               >
-                <span>System Logs</span>
+                <span></span>
               </div>
             </div>
           )}
