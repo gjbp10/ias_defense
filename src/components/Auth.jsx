@@ -10,9 +10,13 @@ export default function Auth({ onLogin }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLocked) return;
+
     setLoading(true);
     setErrorMsg('');
 
@@ -24,11 +28,45 @@ export default function Auth({ onLogin }) {
 
       if (error) throw error;
       
+      // Verify if the user is an admin
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_roles')
+        .select('*')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (adminError) {
+        await supabase.auth.signOut();
+        throw new Error('Error verifying admin privileges. Please try again.');
+      }
+      
+      if (!adminData) {
+        // Not an admin, sign them out immediately
+        await supabase.auth.signOut();
+        throw new Error('Unauthorized. You do not have administrator access.');
+      }
+
+      setFailedAttempts(0);
+      
       // On success, we don't necessarily need to call onLogin if AuthWrapper is listening to state changes,
       // but we can call it to instantly trigger a local state flip if AuthWrapper expects it.
       if (onLogin) onLogin();
     } catch (error) {
-      setErrorMsg(error.message || 'Failed to sign in. Please check your credentials.');
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+      
+      if (newAttempts >= 5) {
+        setIsLocked(true);
+        setErrorMsg('Too many failed attempts. Try again in 3 minutes.');
+        // Unlock after 3 minutes (180000 ms)
+        setTimeout(() => {
+          setIsLocked(false);
+          setFailedAttempts(0);
+          setErrorMsg('');
+        }, 180000);
+      } else {
+        setErrorMsg(`Login failed. You have ${5 - newAttempts} attempts remaining.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -121,18 +159,18 @@ export default function Auth({ onLogin }) {
     btn: {
       width: '100%',
       padding: '14px',
-      backgroundColor: isHovered && !loading ? '#0369a1' : 'var(--color-brand)',
+      backgroundColor: isHovered && !loading && !isLocked ? '#0369a1' : (isLocked ? '#9ca3af' : 'var(--color-brand)'),
       color: 'white',
       border: 'none',
       borderRadius: 'var(--radius-md)',
       fontSize: '15px',
       fontWeight: 600,
-      cursor: loading ? 'not-allowed' : 'pointer',
+      cursor: (loading || isLocked) ? 'not-allowed' : 'pointer',
       marginTop: '12px',
       transition: 'all 0.2s ease',
-      transform: isHovered && !loading ? 'translateY(-1px)' : 'translateY(0)',
-      boxShadow: isHovered && !loading ? '0 4px 6px -1px rgba(2, 132, 199, 0.2)' : 'none',
-      opacity: loading ? 0.7 : 1
+      transform: isHovered && !loading && !isLocked ? 'translateY(-1px)' : 'translateY(0)',
+      boxShadow: isHovered && !loading && !isLocked ? '0 4px 6px -1px rgba(2, 132, 199, 0.2)' : 'none',
+      opacity: (loading || isLocked) ? 0.7 : 1
     },
     errorBox: {
       display: 'flex',
@@ -189,7 +227,7 @@ export default function Auth({ onLogin }) {
                 onFocus={() => setFocusedInput('email')}
                 onBlur={() => setFocusedInput(null)}
                 required 
-                disabled={loading}
+                disabled={loading || isLocked}
               />
             </div>
           </div>
@@ -207,7 +245,7 @@ export default function Auth({ onLogin }) {
                 onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput(null)}
                 required 
-                disabled={loading}
+                disabled={loading || isLocked}
               />
             </div>
           </div>
@@ -217,9 +255,9 @@ export default function Auth({ onLogin }) {
             style={styles.btn}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            disabled={loading}
+            disabled={loading || isLocked}
           >
-            {loading ? 'Authenticating...' : 'Sign In'}
+            {loading ? 'Authenticating...' : isLocked ? 'Locked' : 'Sign In'}
           </button>
         </form>
 

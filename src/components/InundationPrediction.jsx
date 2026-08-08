@@ -216,24 +216,28 @@ export default function InundationPrediction() {
     if (riverDepth <= 0) return null;
 
     let barangays = [];
+    let centers = [];
+    
     if (riverDepth < 10) {
       barangays = ['Tumana'];
+      centers = ['Concepcion Elementary School', 'Concepcion Integrated School ES'];
     } else if (riverDepth < 15) {
       barangays = ['Tumana', 'Nangka'];
+      centers = ['Concepcion Elementary School', 'Nangka Elementary School', 'Nangka Gym'];
     } else if (riverDepth < 20) {
       barangays = ['Tumana', 'Nangka', 'Malanday'];
+      centers = ['Concepcion Elementary School', 'Nangka Elementary School', 'Malanday Elementary School', 'Bulelak Gym'];
     } else {
-      barangays = ['Tumana', 'Nangka', 'Malanday', 'Provident'];
+      barangays = ['Tumana', 'Nangka', 'Malanday', 'Tañong', 'Jesus dela Peña'];
+      centers = ['Concepcion Elementary School', 'Nangka Elementary School', 'Malanday Elementary School', 'Tañong High School', 'Jesus Dela Peña NHS', 'Bulelak Gym'];
     }
 
     let households = 4213;
     let population = 17842;
-    let centers = 8;
 
     if (riverDepth !== 16) {
       households = Math.round(riverDepth * 263.3125);
       population = Math.round(riverDepth * 1115.125);
-      centers = Math.min(24, Math.max(1, Math.round(riverDepth * 0.5)));
     }
 
     return {
@@ -472,12 +476,20 @@ export default function InundationPrediction() {
                   </div>
 
                   {/* Recommended Evacuation Centers */}
-                  <div className="impact-item-row">
+                  <div className="impact-item-row" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: '8px' }}>
                     <div className="impact-label-group">
                       <ArrowUpRight size={15} className="item-icon" />
                       <span className="impact-item-label">Recommended Evacuation Centers</span>
                     </div>
-                    <span className="impact-item-value accent">{impactData.evacuationCenters}</span>
+                    <div className="barangay-tags-container" style={{ width: '100%', flexWrap: 'wrap' }}>
+                      {Array.isArray(impactData.evacuationCenters) ? impactData.evacuationCenters.map(center => (
+                        <span key={center} className="brgy-tag" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                          {center}
+                        </span>
+                      )) : (
+                        <span className="impact-item-value accent">{impactData.evacuationCenters}</span>
+                      )}
+                    </div>
                   </div>
 
                 </div>
