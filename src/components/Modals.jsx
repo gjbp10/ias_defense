@@ -232,15 +232,7 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
           />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Advisory Body Content</label>
-          <textarea 
-            className="form-textarea" 
-            rows="6"
-            value={message} 
-            onChange={(e) => setMessage(e.target.value)} 
-          />
-        </div>
+
       </div>
       <div className="modal-footer">
         <button className="btn-secondary" onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
