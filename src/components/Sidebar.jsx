@@ -1,27 +1,22 @@
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
-  Activity, 
+  BookOpen, 
   ChevronDown, 
   ChevronUp, 
-  Radio, 
-  Waves, 
-  AlertTriangle, 
-  Users, 
-  Rss, 
-  Settings, 
-  BookOpen,
-  HelpCircle,
-  Gavel
+  GraduationCap, 
+  UserCheck, 
+  Building2, 
+  ShieldAlert, 
+  FileText,
+  Settings
 } from 'lucide-react';
 
 export default function Sidebar({ activeView, onViewChange }) {
-  // Manage expand/collapse state for collapsible groups
   const [expandedGroups, setExpandedGroups] = useState({
-    monitoring: true,
-    community: false,
-    content: false,
-    system: false
+    academic: true,
+    registrar: true,
+    security: true
   });
 
   const toggleGroup = (group) => {
@@ -34,159 +29,106 @@ export default function Sidebar({ activeView, onViewChange }) {
   return (
     <aside className="app-sidebar">
       <div className="sidebar-menu-list">
-        {/* Dashboard Link */}
+        {/* Student Portal Overview */}
         <div 
           className={`sidebar-link ${activeView === 'dashboard' ? 'active' : ''}`}
           onClick={() => onViewChange('dashboard')}
         >
           <LayoutDashboard size={18} />
-          <span>Dashboard</span>
+          <span>Portal Dashboard</span>
         </div>
 
-        {/* Monitoring Section */}
+        {/* Student Academic Services */}
         <div>
           <div 
-            className={`menu-group-header ${activeView.startsWith('monitoring-') ? 'active' : ''}`}
-            onClick={() => toggleGroup('monitoring')}
+            className={`menu-group-header ${activeView.startsWith('academic-') ? 'active' : ''}`}
+            onClick={() => toggleGroup('academic')}
           >
             <div className="menu-group-title">
-              <Activity size={18} />
-              <span>Monitoring</span>
+              <GraduationCap size={18} />
+              <span>Student Services</span>
             </div>
-            {expandedGroups.monitoring ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedGroups.academic ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
           
-          {expandedGroups.monitoring && (
+          {expandedGroups.academic && (
             <div className="menu-group-sublist">
               <div 
-                className={`sidebar-link ${activeView === 'monitoring-stations' ? 'active' : ''}`}
-                onClick={() => onViewChange('monitoring-stations')}
+                className={`sidebar-link ${activeView === 'academic-courses' ? 'active' : ''}`}
+                onClick={() => onViewChange('academic-courses')}
               >
-                <Radio size={16} />
-                <span>Monitoring Stations</span>
+                <BookOpen size={16} />
+                <span>Course Registration</span>
               </div>
               <div 
-                className={`sidebar-link ${activeView === 'monitoring-river-level' ? 'active' : ''}`}
-                onClick={() => onViewChange('monitoring-river-level')}
+                className={`sidebar-link ${activeView === 'academic-records' ? 'active' : ''}`}
+                onClick={() => onViewChange('academic-records')}
               >
-                <Waves size={16} />
-                <span>Marikina River Level</span>
-              </div>
-              <div 
-                className={`sidebar-link ${activeView === 'monitoring-inundation' ? 'active' : ''}`}
-                onClick={() => onViewChange('monitoring-inundation')}
-              >
-                <AlertTriangle size={16} />
-                <span>Inundation Prediction</span>
+                <UserCheck size={16} />
+                <span>Study Load & Records</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Community Management Section */}
+        {/* Registrar Administration (Target for V3 Privilege Escalation) */}
         <div>
           <div 
-            className={`menu-group-header ${activeView.startsWith('community-') ? 'active' : ''}`}
-            onClick={() => toggleGroup('community')}
+            className={`menu-group-header ${activeView.startsWith('registrar-') ? 'active' : ''}`}
+            onClick={() => toggleGroup('registrar')}
           >
             <div className="menu-group-title">
-              <Users size={18} />
-              <span>Community Management</span>
+              <Building2 size={18} />
+              <span>Registrar Office</span>
             </div>
-            {expandedGroups.community ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedGroups.registrar ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
           
-          {expandedGroups.community && (
+          {expandedGroups.registrar && (
             <div className="menu-group-sublist">
               <div 
-                className={`sidebar-link ${activeView === 'community-reports-moderation' ? 'active' : ''}`}
-                onClick={() => onViewChange('community-reports-moderation')}
+                className={`sidebar-link ${activeView === 'registrar-courses' ? 'active' : ''}`}
+                onClick={() => onViewChange('registrar-courses')}
               >
-                <span>Reports Moderation</span>
+                <Settings size={16} />
+                <span>Course Management</span>
               </div>
               <div 
-                className={`sidebar-link ${activeView === 'community-alerts' ? 'active' : ''}`}
-                onClick={() => onViewChange('community-alerts')}
+                className={`sidebar-link ${activeView === 'registrar-students' ? 'active' : ''}`}
+                onClick={() => onViewChange('registrar-students')}
               >
-                <span>User Management</span>
+                <FileText size={16} />
+                <span>Master Enrollment List</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Content Management Section */}
+        {/* IAS2 Security Laboratory & Vulnerability Audit */}
         <div>
           <div 
-            className={`menu-group-header ${activeView.startsWith('content-') ? 'active' : ''}`}
-            onClick={() => toggleGroup('content')}
+            className={`menu-group-header ${activeView.startsWith('security-') ? 'active' : ''}`}
+            onClick={() => toggleGroup('security')}
           >
             <div className="menu-group-title">
-              <Rss size={18} />
-              <span>Content Management</span>
+              <ShieldAlert size={18} />
+              <span>IAS2 Testing Environment</span>
             </div>
-            {expandedGroups.content ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedGroups.security ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
           
-          {expandedGroups.content && (
+          {expandedGroups.security && (
             <div className="menu-group-sublist">
               <div 
-                className={`sidebar-link ${activeView === 'content-advisories' ? 'active' : ''}`}
-                onClick={() => onViewChange('content-advisories')}
+                className={`sidebar-link ${activeView === 'security-lab' ? 'active' : ''}`}
+                onClick={() => onViewChange('security-lab')}
               >
-                <span>Advisories</span>
-              </div>
-              <div 
-                className={`sidebar-link ${activeView === 'content-news' ? 'active' : ''}`}
-                onClick={() => onViewChange('content-news')}
-              >
-                <span></span>
-              </div>
-              <div 
-                className={`sidebar-link ${activeView === 'content-hotlines' ? 'active' : ''}`}
-                onClick={() => onViewChange('content-hotlines')}
-              >
-                <span>Emergency Hotlines</span>
+                <ShieldAlert size={16} style={{ color: '#ef4444' }} />
+                <span>Vulnerability Lab Panel</span>
               </div>
             </div>
           )}
         </div>
-
-        {/* System Section */}
-        <div>
-          <div 
-            className={`menu-group-header ${activeView.startsWith('system-') ? 'active' : ''}`}
-            onClick={() => toggleGroup('system')}
-          >
-            <div className="menu-group-title">
-              <Settings size={18} />
-              <span>System</span>
-            </div>
-            {expandedGroups.system ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </div>
-          
-          {expandedGroups.system && (
-            <div className="menu-group-sublist">
-              <div 
-                className={`sidebar-link ${activeView === 'system-settings' ? 'active' : ''}`}
-                onClick={() => onViewChange('system-settings')}
-              >
-                <span></span>
-              </div>
-              <div 
-                className={`sidebar-link ${activeView === 'system-logs' ? 'active' : ''}`}
-                onClick={() => onViewChange('system-logs')}
-              >
-                <span></span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="sidebar-footer">
-        <button className="footer-btn" onClick={() => onViewChange('documentation')} title="Documentation">
-          <BookOpen size={18} />
-        </button>
       </div>
     </aside>
   );

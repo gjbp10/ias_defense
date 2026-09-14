@@ -121,7 +121,7 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
       setSeverity(computedSeverity);
 
       const generatedSubject = `FLOOD WARNING: ${displayStationTitle} reached ${alertStatus.toUpperCase()} (${level}m)`;
-      
+
       let actionInstructions = '';
       if (is3rd) {
         actionInstructions = `CRITICAL ACTION REQUIRED:\n1. Immediate mandatory evacuation is in effect for identified danger zones in ${affectedString}.\n2. Proceed to designated evacuation centers immediately.\n3. Turn off main electric switches before evacuating.`;
@@ -133,7 +133,7 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
         actionInstructions = `ROUTINE NOTICE:\n1. Water level at ${displayStationTitle} is within normal bounds (${level}m).\n2. No immediate threat of overflow in ${affectedString}.`;
       }
 
-      const generatedMessage = `AUTOMATIC PUBLIC WATER LEVEL ADVISORY:\n\nPlease be advised that the ${displayStationTitle} has registered a water gauge reading of ${level} meters (${alertLabel}).\n\nDirectly Affected Barangays / Sectors:\n${affectedString}\n\n${actionInstructions}\n\n- Marikina Disaster Risk Reduction & Management Office (MCDRRMO)`;
+      const generatedMessage = `AUTOMATIC PUBLIC WATER LEVEL ADVISORY:\n\nPlease be advised that the ${displayStationTitle} has registered a water gauge reading of ${level} meters (${alertLabel}).\n\nDirectly Affected Barangays / Sectors:\n${affectedString}\n\n${actionInstructions}\n\n- Marikina Disaster Risk Reduction & Management Office ()`;
 
       setSubject(generatedSubject);
       setMessage(generatedMessage);
@@ -214,21 +214,21 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
 
         <div className="form-group" style={{ marginBottom: '12px' }}>
           <label className="form-label">Affected Barangays / Sectors</label>
-          <input 
-            type="text" 
-            className="form-input" 
-            value={affectedAreas} 
-            onChange={(e) => setAffectedAreas(e.target.value)} 
+          <input
+            type="text"
+            className="form-input"
+            value={affectedAreas}
+            onChange={(e) => setAffectedAreas(e.target.value)}
           />
         </div>
 
         <div className="form-group" style={{ marginBottom: '12px' }}>
           <label className="form-label">Advisory Subject Title</label>
-          <input 
-            type="text" 
-            className="form-input" 
-            value={subject} 
-            onChange={(e) => setSubject(e.target.value)} 
+          <input
+            type="text"
+            className="form-input"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
           />
         </div>
 
@@ -239,9 +239,9 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
           {copied ? <Check size={14} style={{ color: 'var(--color-online)' }} /> : <Copy size={14} />}
           <span>{copied ? 'Copied!' : 'Copy Text'}</span>
         </button>
-        <button 
-          className="btn-primary" 
-          onClick={handleSend} 
+        <button
+          className="btn-primary"
+          onClick={handleSend}
           disabled={isSubmitting}
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
@@ -303,10 +303,10 @@ export function NotifyModal({ isOpen, onClose }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                 {Object.keys(sectors).map((sector) => (
                   <label key={sector} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={sectors[sector]} 
-                      onChange={() => handleSectorChange(sector)} 
+                    <input
+                      type="checkbox"
+                      checked={sectors[sector]}
+                      onChange={() => handleSectorChange(sector)}
                       style={{ width: '16px', height: '16px' }}
                     />
                     <span>Barangay {sector}</span>
@@ -317,9 +317,9 @@ export function NotifyModal({ isOpen, onClose }) {
 
             <div className="form-group">
               <label className="form-label">Broadcast Delivery Channel</label>
-              <select 
-                className="form-input" 
-                value={channel} 
+              <select
+                className="form-input"
+                value={channel}
                 onChange={(e) => setChannel(e.target.value)}
                 style={{ backgroundColor: '#ffffff', cursor: 'pointer' }}
               >
@@ -328,7 +328,7 @@ export function NotifyModal({ isOpen, onClose }) {
                 <option value="Siren">LGU Voice Siren Alert Trigger</option>
               </select>
             </div>
-            
+
             <div style={{ fontSize: '12px', color: 'var(--text-light)', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
               You are preparing to broadcast warning triggers to residents in <strong>{targetCount}</strong> sector(s) using the <strong>{channel}</strong> gateway.
             </div>
@@ -364,14 +364,14 @@ export function NotifyModal({ isOpen, onClose }) {
           </div>
         )}
       </div>
-      
+
       <div className="modal-footer">
         {sendingState === 'idle' && (
           <>
             <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button 
-              className="btn-primary" 
-              onClick={startBroadcast} 
+            <button
+              className="btn-primary"
+              onClick={startBroadcast}
               disabled={targetCount === 0}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
@@ -414,7 +414,7 @@ export function PredictModal({ isOpen, onClose }) {
             setLog(logs => [...logs, 'Calculation completed.', 'Identified critical threats: Barangays Tumana, Provident.']);
             return 100;
           }
-          
+
           if (prev === 20) {
             setLog(logs => [...logs, 'Loading topographical height meshes...']);
           } else if (prev === 50) {
@@ -468,7 +468,7 @@ export function PredictModal({ isOpen, onClose }) {
           </div>
         )}
       </div>
-      
+
       <div className="modal-footer">
         {running === 'idle' && (
           <>
