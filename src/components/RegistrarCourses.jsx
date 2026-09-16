@@ -9,6 +9,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 export default function RegistrarCourses() {
   const [courses, setCourses] = useState([]);
@@ -27,11 +28,24 @@ export default function RegistrarCourses() {
   const [notification, setNotification] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fetch courses from Supabase database
+  // Fetch courses from MySQL or Supabase database
   const fetchCourses = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
+      // 1. Try fetching from local MySQL API backend
+      try {
+        const mysqlData = await apiClient.getCourses();
+        if (mysqlData && Array.isArray(mysqlData)) {
+          setCourses(mysqlData);
+          setLoading(false);
+          return;
+        }
+      } catch (mysqlErr) {
+        console.warn('MySQL API fetch failed, trying Supabase fallback:', mysqlErr.message);
+      }
+
+      // 2. Supabase Fallback
       const { data, error } = await supabase
         .from('courses')
         .select('*')
@@ -57,7 +71,7 @@ export default function RegistrarCourses() {
       }
     } catch (err) {
       console.error('Database fetch error:', err);
-      setErrorMsg(err.message || 'Could not connect to courses table in Supabase.');
+      setErrorMsg(err.message || 'Could not connect to courses database.');
     } finally {
       setLoading(false);
     }

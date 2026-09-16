@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, CheckCircle, Clock, BookOpen, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 export default function StudentCourseRegistration({ session }) {
   const [courses, setCourses] = useState([]);
@@ -18,7 +19,21 @@ export default function StudentCourseRegistration({ session }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Fetch available course catalog
+      // 1. Try MySQL API
+      try {
+        const mysqlCourses = await apiClient.getCourses();
+        const mysqlEnrollments = await apiClient.getEnrollments(defaultStudentNumber);
+        if (mysqlCourses && Array.isArray(mysqlCourses)) {
+          setCourses(mysqlCourses);
+          setEnrolledCourseCodes((mysqlEnrollments || []).map(e => e.course_code));
+          setLoading(false);
+          return;
+        }
+      } catch (mErr) {
+        console.warn('MySQL catalog fetch notice:', mErr.message);
+      }
+
+      // 2. Supabase fallback
       const { data: courseData, error: courseErr } = await supabase
         .from('courses')
         .select('*')
@@ -27,7 +42,6 @@ export default function StudentCourseRegistration({ session }) {
       if (courseErr) throw courseErr;
       setCourses(courseData || []);
 
-      // 2. Fetch student's existing enrollments
       const { data: enrollData, error: enrollErr } = await supabase
         .from('enrollments')
         .select('course_code')
@@ -38,7 +52,7 @@ export default function StudentCourseRegistration({ session }) {
       }
     } catch (err) {
       console.error('Fetch error:', err);
-      setErrorMsg(err.message || 'Error loading courses from Supabase.');
+      setErrorMsg(err.message || 'Error loading courses database.');
     } finally {
       setLoading(false);
     }

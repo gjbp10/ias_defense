@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, User, CheckCircle, FileText, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 export default function StudentRecords({ session }) {
   const [student, setStudent] = useState({
@@ -21,7 +22,19 @@ export default function StudentRecords({ session }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Fetch student info
+      // 1. Try MySQL API
+      try {
+        const mysqlEnrolled = await apiClient.getEnrollments(student.student_number);
+        if (mysqlEnrolled && Array.isArray(mysqlEnrolled)) {
+          setEnrolledCourses(mysqlEnrolled);
+          setLoading(false);
+          return;
+        }
+      } catch (mErr) {
+        console.warn('MySQL enrollment fetch notice:', mErr.message);
+      }
+
+      // 2. Supabase fallback
       const { data: studentData } = await supabase
         .from('students')
         .select('*')
@@ -32,7 +45,6 @@ export default function StudentRecords({ session }) {
         setStudent(studentData);
       }
 
-      // 2. Fetch enrolled course records
       const { data: enrollments, error: enrollErr } = await supabase
         .from('enrollments')
         .select('course_code, enrolled_at')

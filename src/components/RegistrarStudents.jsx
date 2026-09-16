@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 export default function RegistrarStudents() {
   const [students, setStudents] = useState([]);
@@ -8,11 +9,24 @@ export default function RegistrarStudents() {
   const [search, setSearch] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fetch students from Supabase
+  // Fetch students from MySQL or Supabase
   const fetchStudents = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
+      // 1. Try MySQL API
+      try {
+        const mysqlStudents = await apiClient.getStudents();
+        if (mysqlStudents && Array.isArray(mysqlStudents)) {
+          setStudents(mysqlStudents);
+          setLoading(false);
+          return;
+        }
+      } catch (mErr) {
+        console.warn('MySQL student fetch notice:', mErr.message);
+      }
+
+      // 2. Supabase Fallback
       const { data, error } = await supabase
         .from('students')
         .select('*')
