@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, Lock, Mail, AlertCircle, ShieldCheck } from 'lucide-react';
+import { GraduationCap, Lock, Mail, AlertCircle } from 'lucide-react';
 import { apiClient } from '../apiClient';
 
 export default function Auth({ onLogin }) {
@@ -13,11 +13,9 @@ export default function Auth({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [isLocked, setIsLocked] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLocked) return;
 
     setLoading(true);
     setErrorMsg('');
@@ -43,21 +41,7 @@ export default function Auth({ onLogin }) {
       const { user } = await apiClient.login(email, password);
       if (onLogin) onLogin(user);
     } catch (error) {
-      // Lockout (HTTP 423) and remaining-attempts counts are tracked
-      // server-side in MySQL now, not in local component state -- so they
-      // can't be reset just by refreshing the page.
-      if (error.status === 423) {
-        setIsLocked(true);
-        setErrorMsg(error.message);
-        setTimeout(() => {
-          setIsLocked(false);
-          setErrorMsg('');
-        }, 5 * 60 * 1000);
-      } else if (error.data && typeof error.data.attemptsRemaining === 'number') {
-        setErrorMsg(`${error.message} You have ${error.data.attemptsRemaining} attempt(s) remaining.`);
-      } else {
-        setErrorMsg(error.message || 'Login failed.');
-      }
+      setErrorMsg(error.message || 'Login failed.');
     } finally {
       setLoading(false);
     }
@@ -171,18 +155,18 @@ export default function Auth({ onLogin }) {
     btn: {
       width: '100%',
       padding: '14px',
-      backgroundColor: isHovered && !loading && !isLocked ? '#0369a1' : (isLocked ? '#9ca3af' : 'var(--color-brand)'),
+      backgroundColor: isHovered && !loading ? '#0369a1' : 'var(--color-brand)',
       color: 'white',
       border: 'none',
       borderRadius: 'var(--radius-md)',
       fontSize: '15px',
       fontWeight: 600,
-      cursor: (loading || isLocked) ? 'not-allowed' : 'pointer',
+      cursor: loading ? 'not-allowed' : 'pointer',
       marginTop: '8px',
       transition: 'all 0.2s ease',
-      transform: isHovered && !loading && !isLocked ? 'translateY(-1px)' : 'translateY(0)',
-      boxShadow: isHovered && !loading && !isLocked ? '0 4px 6px -1px rgba(2, 132, 199, 0.2)' : 'none',
-      opacity: (loading || isLocked) ? 0.7 : 1
+      transform: isHovered && !loading ? 'translateY(-1px)' : 'translateY(0)',
+      boxShadow: isHovered && !loading ? '0 4px 6px -1px rgba(2, 132, 199, 0.2)' : 'none',
+      opacity: loading ? 0.7 : 1
     },
     errorBox: {
       display: 'flex',
@@ -309,7 +293,7 @@ export default function Auth({ onLogin }) {
                 onFocus={() => setFocusedInput('email')}
                 onBlur={() => setFocusedInput(null)}
                 required 
-                disabled={loading || (mode === 'login' && isLocked)}
+                disabled={loading}
               />
             </div>
           </div>
@@ -327,7 +311,7 @@ export default function Auth({ onLogin }) {
                 onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput(null)}
                 required 
-                disabled={loading || (mode === 'login' && isLocked)}
+                disabled={loading}
               />
             </div>
           </div>
@@ -337,11 +321,11 @@ export default function Auth({ onLogin }) {
             style={styles.btn}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            disabled={loading || (mode === 'login' && isLocked)}
+            disabled={loading}
           >
             {loading 
               ? (mode === 'login' ? 'Authenticating...' : 'Creating Account...') 
-              : (mode === 'login' && isLocked ? 'Locked' : (mode === 'login' ? 'Sign In' : 'Create Account'))}
+              : (mode === 'login' ? 'Sign In' : 'Create Account')}
           </button>
         </form>
 

@@ -6,7 +6,6 @@ import dotenv from 'dotenv';
 
 import { pool } from './db.js';
 import { sessionMiddleware } from './session.js';
-import { invalidCsrfTokenError } from './middleware/csrf.js';
 
 import authRoutes from './routes/auth.routes.js';
 import studentsRoutes from './routes/students.routes.js';
@@ -21,24 +20,18 @@ dotenv.config();
 
 const app = express();
 
-// Trust the first proxy hop (Railway sits in front of this app), so
-// req.ip reflects the real client IP for rate limiting / login_attempts,
-// and secure cookies are detected correctly.
+// Trust the first proxy hop (Railway sits in front of this app).
 app.set('trust proxy', 1);
 
 app.use(helmet());
 
-// CORS is locked to the actual frontend origin(s) -- comma-separated in
-// CLIENT_ORIGIN -- with credentials enabled so the session cookie can be
-// sent cross-origin (Vercel -> Railway). This replaces the previous
-// app.use(cors()) which allowed literally any origin.
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim());
 app.use(cors({
-  origin: allowedOrigins,
+  origin: true,
   credentials: true,
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(sessionMiddleware);
 
@@ -60,16 +53,7 @@ app.use('/api/hotlines', hotlinesRoutes);
 app.use('/api/monitoring-stations', monitoringStationsRoutes);
 app.use('/api/community-reports', communityReportsRoutes);
 
-// CSRF errors are thrown by doubleCsrfProtection via next(err) -- caught
-// here and turned into a clean 403 instead of a generic 500.
-app.use((error, req, res, next) => {
-  if (error === invalidCsrfTokenError) {
-    return res.status(403).json({ error: 'Invalid or missing CSRF token.' });
-  }
-  next(error);
-});
-
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   console.error('Unhandled error:', error);
   res.status(500).json({ error: 'Internal server error.' });
 });

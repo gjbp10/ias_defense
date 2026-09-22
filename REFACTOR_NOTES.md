@@ -1,5 +1,8 @@
 # AUCRES / IAS Defense Web — Security Refactor Notes
 
+> Historical document. The current project intentionally differs from this
+> earlier security pass. See `CHANGES.md` for the current codebase state.
+
 This refactor removes Supabase entirely and replaces it with custom,
 server-verified authentication, plus fixes and live-tests mitigations for
 brute force, SQL injection, and CSRF. See the conversation this shipped

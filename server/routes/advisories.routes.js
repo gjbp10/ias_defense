@@ -2,15 +2,9 @@ import express from 'express';
 import { pool } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireRole } from '../middleware/requireRole.js';
-import { doubleCsrfProtection } from '../middleware/csrf.js';
 import { logAudit } from '../utils/audit.js';
 
 const router = express.Router();
-
-const UPDATABLE_FIELDS = [
-  'title', 'category', 'severity', 'status', 'description',
-  'recommended_action', 'affected_areas', 'duration_start', 'duration_end',
-];
 
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -21,7 +15,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, requireRole('registrar', 'admin'), doubleCsrfProtection, async (req, res) => {
+router.post('/', requireAuth, requireRole('registrar', 'admin'), async (req, res) => {
   const {
     title, category, severity, status, description,
     recommended_action, affected_areas, duration_start, duration_end, published_at,
@@ -30,15 +24,13 @@ router.post('/', requireAuth, requireRole('registrar', 'admin'), doubleCsrfProte
   if (!title) return res.status(400).json({ error: 'title is required.' });
 
   try {
+    const raw = (value) => value == null ? 'NULL' : `'${value}'`;
     const [result] = await pool.query(
       `INSERT INTO advisories
         (title, category, severity, status, description, recommended_action, affected_areas, duration_start, duration_end, published_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        title, category || 'Weather', severity || 'Low', status || 'Active',
-        description || null, recommended_action || null, affected_areas || null,
-        duration_start || null, duration_end || null, published_at || new Date(),
-      ]
+       VALUES (${raw(title)}, ${raw(category || 'Weather')}, ${raw(severity || 'Low')}, ${raw(status || 'Active')},
+        ${raw(description)}, ${raw(recommended_action)}, ${raw(affected_areas)}, ${raw(duration_start)},
+        ${raw(duration_end)}, ${raw(published_at || new Date().toISOString())})`
     );
     await logAudit({ operator: req.session.user.email, category: 'ADVISORIES', details: `Published advisory "${title}"`, ip: req.ip });
     res.status(201).json({ success: true, id: result.insertId });
@@ -49,26 +41,20 @@ router.post('/', requireAuth, requireRole('registrar', 'admin'), doubleCsrfProte
 
 // Used for both edits and the "archive/unarchive" status toggle -- callers
 // send only the fields that changed, same as the old supabase.update(payload).
-router.put('/:id', requireAuth, requireRole('registrar', 'admin'), doubleCsrfProtection, async (req, res) => {
+router.put('/:id', requireAuth, requireRole('registrar', 'admin'), async (req, res) => {
   const fields = req.body || {};
   const setClauses = [];
-  const values = [];
 
-  for (const key of UPDATABLE_FIELDS) {
-    if (key in fields) {
-      setClauses.push(`${key} = ?`);
-      values.push(fields[key]);
-    }
+  for (const [key, value] of Object.entries(fields)) {
+    setClauses.push(`${key} = '${value}'`);
   }
 
   if (setClauses.length === 0) {
     return res.status(400).json({ error: 'No valid fields to update.' });
   }
 
-  values.push(req.params.id);
-
   try {
-    await pool.query(`UPDATE advisories SET ${setClauses.join(', ')} WHERE id = ?`, values);
+    await pool.query(`UPDATE advisories SET ${setClauses.join(', ')} WHERE id = ${req.params.id}`);
     await logAudit({ operator: req.session.user.email, category: 'ADVISORIES', details: `Updated advisory id ${req.params.id}`, ip: req.ip });
     res.json({ success: true });
   } catch (err) {
@@ -76,9 +62,9 @@ router.put('/:id', requireAuth, requireRole('registrar', 'admin'), doubleCsrfPro
   }
 });
 
-router.delete('/:id', requireAuth, requireRole('registrar', 'admin'), doubleCsrfProtection, async (req, res) => {
+router.delete('/:id', requireAuth, requireRole('registrar', 'admin'), async (req, res) => {
   try {
-    await pool.query('DELETE FROM advisories WHERE id = ?', [req.params.id]);
+    await pool.query(`DELETE FROM advisories WHERE id = ${req.params.id}`);
     await logAudit({ operator: req.session.user.email, category: 'ADVISORIES', details: `Deleted advisory id ${req.params.id}`, ip: req.ip });
     res.json({ success: true });
   } catch (err) {
