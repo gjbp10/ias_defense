@@ -4,11 +4,13 @@ import mysql from 'mysql2/promise';
 // this pool using parameterized ("?") placeholders -- never string-built
 // SQL -- which is what keeps this app safe from SQL injection.
 export const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'ias_defense_db',
+  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'ias_defense_db',
+  port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
+
