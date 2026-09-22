@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // In-memory CSRF token cache. It's intentionally NOT stored in
 // localStorage/sessionStorage -- it only needs to live as long as the tab
