@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -60,16 +62,20 @@ app.use('/api/hotlines', hotlinesRoutes);
 app.use('/api/monitoring-stations', monitoringStationsRoutes);
 app.use('/api/community-reports', communityReportsRoutes);
 
-// CSRF errors are thrown by doubleCsrfProtection via next(err) -- caught
-// here and turned into a clean 403 instead of a generic 500.
-app.use((error, req, res, next) => {
-  if (error === invalidCsrfTokenError) {
-    return res.status(403).json({ error: 'Invalid or missing CSRF token.' });
-  }
-  next(error);
+
+const distPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../dist'
+);
+
+app.use(express.static(distPath));
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   console.error('Unhandled error:', error);
   res.status(500).json({ error: 'Internal server error.' });
 });
