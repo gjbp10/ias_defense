@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -52,6 +54,18 @@ app.use('/api/advisories', advisoriesRoutes);
 app.use('/api/hotlines', hotlinesRoutes);
 app.use('/api/monitoring-stations', monitoringStationsRoutes);
 app.use('/api/community-reports', communityReportsRoutes);
+
+const distPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../dist'
+);
+
+app.use(express.static(distPath));
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 app.use((error, req, res, _next) => {
   console.error('Unhandled error:', error);
