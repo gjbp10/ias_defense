@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -73,6 +75,13 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   res.sendFile(path.join(distPath, 'index.html'));
 });
+
+const distPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../dist'
+);
+
+app.use(express.static(distPath));
 
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
