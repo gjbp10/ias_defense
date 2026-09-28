@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import RegistrarCourses from './components/RegistrarCourses';
 import RegistrarStudents from './components/RegistrarStudents';
 import { Building2, Settings, Users, LogOut, ShieldAlert } from 'lucide-react';
-import { supabase } from './supabaseClient';
+import { apiClient } from './apiClient';
 
 export default function RegistrarPortalApp({ session, onSwitchPortal }) {
   const [activeView, setActiveView] = useState('registrar-courses');
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await apiClient.logout();
+    } finally {
+      window.location.reload();
+    }
   };
 
   const userEmail = session?.user?.email || 'registrar.admin@university.edu.ph';

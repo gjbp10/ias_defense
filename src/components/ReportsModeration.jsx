@@ -3,7 +3,9 @@ import { ChevronLeft, ChevronRight, RefreshCw, CheckCircle, AlertTriangle, XCirc
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
+
+const POLL_INTERVAL_MS = 15000;
 
 // Custom Leaflet Icons for pin markers per report
 const selectedPinIcon = new L.Icon({
@@ -45,21 +47,15 @@ export default function ReportsModeration() {
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('community_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching Supabase reports:', error);
-      } else if (data) {
+      const data = await apiClient.getCommunityReports();
+      if (data) {
         setReports(data);
         if (data.length > 0 && !selectedReport) {
           setSelectedReport(data[0]);
         }
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error('Fetch error:', err.message);
     } finally {
       setLoading(false);
       setLastUpdated(new Date().toLocaleString());
@@ -68,18 +64,9 @@ export default function ReportsModeration() {
 
   useEffect(() => {
     fetchReports();
-
-    // Realtime listener for incoming mobile reports
-    const channel = supabase
-      .channel('public:community_reports')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_reports' }, () => {
-        fetchReports();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Poll for incoming mobile reports instead of a realtime subscription.
+    const intervalId = setInterval(fetchReports, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   const maskName = (name) => {
@@ -96,18 +83,10 @@ export default function ReportsModeration() {
 
   const handleUpdateStatus = async (reportId, newStatus) => {
     try {
-      const { error } = await supabase
-        .from('community_reports')
-        .update({ status: newStatus })
-        .eq('id', reportId);
-
-      if (error) {
-        alert('Failed to update report status: ' + error.message);
-      } else {
-        setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
-        if (selectedReport && selectedReport.id === reportId) {
-          setSelectedReport({ ...selectedReport, status: newStatus });
-        }
+      await apiClient.updateCommunityReportStatus(reportId, newStatus);
+      setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+      if (selectedReport && selectedReport.id === reportId) {
+        setSelectedReport({ ...selectedReport, status: newStatus });
       }
     } catch (err) {
       alert('Error updating status: ' + err.message);

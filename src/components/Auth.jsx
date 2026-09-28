@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GraduationCap, Lock, Mail, AlertCircle, ShieldCheck } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 export default function Auth({ onLogin }) {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -13,7 +13,6 @@ export default function Auth({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -26,28 +25,12 @@ export default function Auth({ onLogin }) {
 
     if (mode === 'register') {
       try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        // Optionally record to admin_roles if table exists
-        if (data?.user) {
-          await supabase
-            .from('admin_roles')
-            .insert([{ user_id: data.user.id, role: 'admin', full_name: fullName }])
-            .catch(() => {});
-        }
-
+        // The server always assigns role = 'student' here, regardless of
+        // anything the client sends -- registrar/admin accounts can only be
+        // provisioned separately, never through public self-registration.
+        const { user } = await apiClient.register(fullName, email, password);
         setSuccessMsg('Account created successfully!');
-        if (onLogin) onLogin();
+        if (onLogin) onLogin(user);
       } catch (error) {
         setErrorMsg(error.message || 'Registration failed.');
       } finally {
@@ -57,29 +40,23 @@ export default function Auth({ onLogin }) {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      setFailedAttempts(0);
-      if (onLogin) onLogin();
+      const { user } = await apiClient.login(email, password);
+      if (onLogin) onLogin(user);
     } catch (error) {
-      const newAttempts = failedAttempts + 1;
-      setFailedAttempts(newAttempts);
-      
-      if (newAttempts >= 5) {
+      // Lockout (HTTP 423) and remaining-attempts counts are tracked
+      // server-side in MySQL now, not in local component state -- so they
+      // can't be reset just by refreshing the page.
+      if (error.status === 423) {
         setIsLocked(true);
-        setErrorMsg('Too many failed attempts. Try again in 3 minutes.');
+        setErrorMsg(error.message);
         setTimeout(() => {
           setIsLocked(false);
-          setFailedAttempts(0);
           setErrorMsg('');
-        }, 180000);
+        }, 5 * 60 * 1000);
+      } else if (error.data && typeof error.data.attemptsRemaining === 'number') {
+        setErrorMsg(`${error.message} You have ${error.data.attemptsRemaining} attempt(s) remaining.`);
       } else {
-        setErrorMsg(error.message || `Login failed. You have ${5 - newAttempts} attempts remaining.`);
+        setErrorMsg(error.message || 'Login failed.');
       }
     } finally {
       setLoading(false);

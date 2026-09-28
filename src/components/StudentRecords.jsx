@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, User, CheckCircle, FileText, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 import { apiClient } from '../apiClient';
 
 export default function StudentRecords({ session }) {
@@ -22,47 +21,8 @@ export default function StudentRecords({ session }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Try MySQL API
-      try {
-        const mysqlEnrolled = await apiClient.getEnrollments(student.student_number);
-        if (mysqlEnrolled && Array.isArray(mysqlEnrolled)) {
-          setEnrolledCourses(mysqlEnrolled);
-          setLoading(false);
-          return;
-        }
-      } catch (mErr) {
-        console.warn('MySQL enrollment fetch notice:', mErr.message);
-      }
-
-      // 2. Supabase fallback
-      const { data: studentData } = await supabase
-        .from('students')
-        .select('*')
-        .eq('student_number', student.student_number)
-        .maybeSingle();
-
-      if (studentData) {
-        setStudent(studentData);
-      }
-
-      const { data: enrollments, error: enrollErr } = await supabase
-        .from('enrollments')
-        .select('course_code, enrolled_at')
-        .eq('student_number', student.student_number);
-
-      if (enrollErr) throw enrollErr;
-
-      if (enrollments && enrollments.length > 0) {
-        const codes = enrollments.map(e => e.course_code);
-        const { data: courseDetails } = await supabase
-          .from('courses')
-          .select('*')
-          .in('course_code', codes);
-
-        setEnrolledCourses(courseDetails || []);
-      } else {
-        setEnrolledCourses([]);
-      }
+      const mysqlEnrolled = await apiClient.getEnrollments(student.student_number);
+      setEnrolledCourses(Array.isArray(mysqlEnrolled) ? mysqlEnrolled : []);
     } catch (err) {
       console.error('Fetch study load error:', err);
       setErrorMsg(err.message || 'Failed to load study load records.');
@@ -79,13 +39,7 @@ export default function StudentRecords({ session }) {
     if (!window.confirm(`Are you sure you want to drop ${courseCode} from your study load?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('enrollments')
-        .delete()
-        .eq('student_number', student.student_number)
-        .eq('course_code', courseCode);
-
-      if (error) throw error;
+      await apiClient.dropCourse(student.student_number, courseCode);
 
       setEnrolledCourses(enrolledCourses.filter(c => c.course_code !== courseCode));
       setNotification(`Dropped ${courseCode} from your current semester study load.`);

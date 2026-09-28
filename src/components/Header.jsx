@@ -1,10 +1,14 @@
 import React from 'react';
 import { GraduationCap, ShieldCheck, LogOut } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 export default function Header({ session }) {
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await apiClient.logout();
+    } finally {
+      window.location.reload();
+    }
   };
 
   const userEmail = session?.user?.email || 'student.aucres@university.edu.ph';

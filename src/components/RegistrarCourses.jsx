@@ -8,7 +8,6 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 import { apiClient } from '../apiClient';
 
 export default function RegistrarCourses() {
@@ -28,47 +27,13 @@ export default function RegistrarCourses() {
   const [notification, setNotification] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fetch courses from MySQL or Supabase database
+  // Fetch courses from the API (MySQL-backed)
   const fetchCourses = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Try fetching from local MySQL API backend
-      try {
-        const mysqlData = await apiClient.getCourses();
-        if (mysqlData && Array.isArray(mysqlData)) {
-          setCourses(mysqlData);
-          setLoading(false);
-          return;
-        }
-      } catch (mysqlErr) {
-        console.warn('MySQL API fetch failed, trying Supabase fallback:', mysqlErr.message);
-      }
-
-      // 2. Supabase Fallback
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        // Seed default sample courses into database if table is empty
-        const sampleCourses = [
-          { course_code: 'CS 101', title: 'Introduction to Computer Science', units: 3, instructor: 'Dr. Alan Turing', schedule: 'MWF 09:00 - 10:00 AM', max_seats: 40, enrolled_seats: 38 },
-          { course_code: 'IAS 202', title: 'Information Assurance & Security 2', units: 3, instructor: 'Prof. Ada Lovelace', schedule: 'TTH 01:30 - 03:00 PM', max_seats: 35, enrolled_seats: 35 },
-          { course_code: 'CS 305', title: 'Database Management Systems', units: 4, instructor: 'Dr. Edgar Codd', schedule: 'MWF 11:00 - 12:30 PM', max_seats: 40, enrolled_seats: 28 },
-          { course_code: 'NET 401', title: 'Computer Networks & Distributed Systems', units: 3, instructor: 'Prof. Vint Cerf', schedule: 'TTH 09:00 - 10:30 AM', max_seats: 30, enrolled_seats: 19 }
-        ];
-
-        const { data: seeded, error: seedErr } = await supabase.from('courses').insert(sampleCourses).select();
-        if (!seedErr && seeded) {
-          setCourses(seeded);
-        }
-      } else {
-        setCourses(data);
-      }
+      const data = await apiClient.getCourses();
+      setCourses(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Database fetch error:', err);
       setErrorMsg(err.message || 'Could not connect to courses database.');
@@ -81,7 +46,7 @@ export default function RegistrarCourses() {
     fetchCourses();
   }, []);
 
-  // Insert course into Supabase
+  // Insert course via the API
   const handleAddCourse = async (e) => {
     e.preventDefault();
     if (!newCourse.course_code || !newCourse.title) return;
@@ -95,22 +60,12 @@ export default function RegistrarCourses() {
         enrolled_seats: 0
       };
 
-      const { data, error } = await supabase
-        .from('courses')
-        .insert([payload])
-        .select();
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setCourses([data[0], ...courses]);
-      } else {
-        await fetchCourses();
-      }
+      await apiClient.addCourse(payload);
+      await fetchCourses();
 
       setShowModal(false);
       setNewCourse({ course_code: '', title: '', units: 3, instructor: '', schedule: '', max_seats: 40 });
-      setNotification(`Course ${payload.course_code} successfully saved to Supabase database.`);
+      setNotification(`Course ${payload.course_code} successfully saved.`);
       setTimeout(() => setNotification(''), 4000);
     } catch (err) {
       console.error('Database insert error:', err);
@@ -118,20 +73,14 @@ export default function RegistrarCourses() {
     }
   };
 
-  // Delete course from Supabase
+  // Delete course via the API
   const handleDeleteCourse = async (id, code) => {
     if (!window.confirm(`Are you sure you want to delete ${code} from the database?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await apiClient.deleteCourse(id);
       setCourses(courses.filter(c => c.id !== id));
-      setNotification(`Course ${code} deleted from Supabase database.`);
+      setNotification(`Course ${code} deleted.`);
       setTimeout(() => setNotification(''), 4000);
     } catch (err) {
       console.error('Database delete error:', err);

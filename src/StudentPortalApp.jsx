@@ -3,13 +3,17 @@ import StudentCourseRegistration from './components/StudentCourseRegistration';
 import StudentRecords from './components/StudentRecords';
 import Header from './components/Header';
 import { LayoutDashboard, BookOpen, UserCheck, LogOut, GraduationCap } from 'lucide-react';
-import { supabase } from './supabaseClient';
+import { apiClient } from './apiClient';
 
 export default function StudentPortalApp({ session, onSwitchPortal }) {
   const [activeView, setActiveView] = useState('academic-courses');
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await apiClient.logout();
+    } finally {
+      window.location.reload();
+    }
   };
 
   const userEmail = session?.user?.email || 'student.aucres@university.edu.ph';
@@ -33,22 +37,28 @@ export default function StudentPortalApp({ session, onSwitchPortal }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Portal Switcher Button for Testing */}
-          <button
-            onClick={onSwitchPortal}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              borderRadius: '6px',
-              color: '#1e40af',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            🏛️ Switch to Registrar Admin Portal
-          </button>
+          {/* Only rendered when the logged-in account actually has registrar
+              or admin privileges -- see App.jsx. A student account never
+              gets this button in the first place, and even a forced click
+              via devtools would still hit a server-side 403 on every
+              registrar API call. */}
+          {onSwitchPortal && (
+            <button
+              onClick={onSwitchPortal}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                color: '#1e40af',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              🏛️ Switch to Registrar Admin Portal
+            </button>
+          )}
 
           <div className="user-profile-badge" onClick={handleLogout} title="Sign Out" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
             <div className="avatar-circle" style={{ backgroundColor: '#1e3a8a', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700 }}>{initials}</div>

@@ -20,7 +20,7 @@ function BaseModal({ isOpen, onClose, title, children }) {
   );
 }
 
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 
 /* --- GENERATE ADVISORY MODAL --- */
 export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }) {
@@ -154,36 +154,26 @@ export function AdvisoryModal({ isOpen, onClose, stationData, onViewAdvisories }
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase
-        .from('advisories')
-        .insert([
-          {
-            title: subject,
-            category: category,
-            severity: severity,
-            status: 'Active',
-            description: message,
-            recommended_action: 'Monitor river levels, keep emergency kits ready, and obey local LGU instructions.',
-            affected_areas: affectedAreas,
-            duration_start: new Date().toISOString(),
-            published_at: new Date().toISOString()
-          }
-        ])
-        .select();
+      await apiClient.createAdvisory({
+        title: subject,
+        category: category,
+        severity: severity,
+        status: 'Active',
+        description: message,
+        recommended_action: 'Monitor river levels, keep emergency kits ready, and obey local LGU instructions.',
+        affected_areas: affectedAreas,
+        duration_start: new Date().toISOString(),
+        published_at: new Date().toISOString()
+      });
 
-      if (error) {
-        console.error('Error inserting advisory to Supabase:', error);
-        alert(`Could not publish advisory to database: ${error.message}`);
-      } else {
-        alert('✅ Advisory created and published directly to the Advisories page!');
-        if (onViewAdvisories) {
-          onViewAdvisories();
-        }
-        onClose();
+      alert('✅ Advisory created and published directly to the Advisories page!');
+      if (onViewAdvisories) {
+        onViewAdvisories();
       }
+      onClose();
     } catch (err) {
-      console.error('Unexpected error publishing advisory:', err);
-      alert('An unexpected error occurred while publishing the advisory.');
+      console.error('Error publishing advisory:', err.message);
+      alert(`Could not publish advisory to database: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }

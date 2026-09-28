@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 import { calculateAlertStatus, getStationThresholds } from '../utils/waterLevelUtils';
+
+const POLL_INTERVAL_MS = 15000;
 import {
   RefreshCw,
   ArrowUpRight,
@@ -70,15 +72,7 @@ export default function RiverLevel({ onActionClick }) {
   // Fetch all available scraped monitoring stations
   const fetchAllStations = async () => {
     try {
-      const { data, error } = await supabase
-        .from('monitoring_stations')
-        .select('*')
-        .order('station_name', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching monitoring stations:', error);
-        return [];
-      }
+      const data = await apiClient.getMonitoringStations('station_name');
 
       if (data && data.length > 0) {
         setStationsList(data);
@@ -123,17 +117,8 @@ export default function RiverLevel({ onActionClick }) {
 
   useEffect(() => {
     loadData();
-
-    const channel = supabase
-      .channel('river-level-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_stations' }, () => {
-        loadData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const intervalId = setInterval(() => loadData(), POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleStationChange = (e) => {

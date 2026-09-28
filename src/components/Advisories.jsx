@@ -17,8 +17,13 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 import { MARIKINA_DISTRICTS } from '../constants/marikinaData.js';
+
+// How often to re-poll for changes made by other users/tabs. Supabase's
+// realtime subscription had no free MySQL equivalent, so this replaces it --
+// simple, and sufficient for advisory publishing (see refactor plan).
+const POLL_INTERVAL_MS = 15000;
 
 export default function Advisories() {
   const [advisories, setAdvisories] = useState([]);
@@ -53,14 +58,8 @@ export default function Advisories() {
   const fetchAdvisories = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('advisories')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.warn('Supabase fetch notice:', error.message);
-      } else if (data) {
+      const data = await apiClient.getAdvisories();
+      if (data) {
         const mapped = data.map(item => ({
           id: item.id,
           title: item.title,
@@ -80,7 +79,7 @@ export default function Advisories() {
         }
       }
     } catch (err) {
-      console.warn('Supabase client error:', err);
+      console.warn('Advisories fetch error:', err.message);
     } finally {
       setLoading(false);
     }
@@ -89,17 +88,10 @@ export default function Advisories() {
   useEffect(() => {
     fetchAdvisories();
 
-    // Subscribe to real-time changes
-    const channel = supabase
-      .channel('advisories-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'advisories' }, () => {
-        fetchAdvisories();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Poll for changes made by other users/tabs instead of a realtime
+    // subscription (see POLL_INTERVAL_MS above).
+    const intervalId = setInterval(fetchAdvisories, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   const selectedAdvisory = advisories.find(a => a.id === selectedId) || advisories[0];
@@ -239,26 +231,22 @@ export default function Advisories() {
 
   const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this advisory?')) {
-      const { error } = await supabase.from('advisories').delete().eq('id', id);
-      if (error) {
-        alert('Could not delete: ' + error.message);
-      } else {
+      try {
+        await apiClient.deleteAdvisory(id);
         fetchAdvisories();
+      } catch (err) {
+        alert('Could not delete: ' + err.message);
       }
     }
   };
 
   const handleArchive = async (id, currentStatus) => {
     const newStatus = currentStatus === 'Archived' ? 'Active' : 'Archived';
-    const { error } = await supabase
-      .from('advisories')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (error) {
-      alert('Could not update status: ' + error.message);
-    } else {
+    try {
+      await apiClient.updateAdvisory(id, { status: newStatus });
       fetchAdvisories();
+    } catch (err) {
+      alert('Could not update status: ' + err.message);
     }
   };
 
@@ -273,11 +261,11 @@ export default function Advisories() {
       affected_areas: adv.affectedAreas
     };
 
-    const { error } = await supabase.from('advisories').insert([payload]);
-    if (error) {
-      alert('Could not duplicate advisory: ' + error.message);
-    } else {
+    try {
+      await apiClient.createAdvisory(payload);
       fetchAdvisories();
+    } catch (err) {
+      alert('Could not duplicate advisory: ' + err.message);
     }
   };
 
@@ -307,20 +295,15 @@ export default function Advisories() {
       duration_end: durationEnd
     };
 
-    if (modalMode === 'create') {
-      const { error } = await supabase.from('advisories').insert([payload]);
-      if (error) {
-        alert('Error publishing to Supabase: ' + error.message);
+    try {
+      if (modalMode === 'create') {
+        await apiClient.createAdvisory(payload);
       } else {
-        await fetchAdvisories();
+        await apiClient.updateAdvisory(formState.id, payload);
       }
-    } else {
-      const { error } = await supabase.from('advisories').update(payload).eq('id', formState.id);
-      if (error) {
-        alert('Error updating in Supabase: ' + error.message);
-      } else {
-        await fetchAdvisories();
-      }
+      await fetchAdvisories();
+    } catch (err) {
+      alert(`Error ${modalMode === 'create' ? 'publishing' : 'updating'} advisory: ` + err.message);
     }
     setIsModalOpen(false);
   };

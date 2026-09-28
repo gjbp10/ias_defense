@@ -9,7 +9,9 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
+
+const POLL_INTERVAL_MS = 15000;
 
 export default function EmergencyHotlines() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,14 +35,8 @@ export default function EmergencyHotlines() {
   const fetchHotlines = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('emergency_hotlines')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.warn('Supabase fetch error:', error.message);
-      } else if (data) {
+      const data = await apiClient.getHotlines();
+      if (data) {
         const mapped = data.map(item => ({
           id: item.id,
           agency: item.agency,
@@ -60,7 +56,7 @@ export default function EmergencyHotlines() {
         }
       }
     } catch (err) {
-      console.warn('Supabase client error:', err);
+      console.warn('Hotlines fetch error:', err.message);
     } finally {
       setLoading(false);
     }
@@ -68,17 +64,8 @@ export default function EmergencyHotlines() {
 
   useEffect(() => {
     fetchHotlines();
-
-    const channel = supabase
-      .channel('hotlines-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'emergency_hotlines' }, () => {
-        fetchHotlines();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const intervalId = setInterval(fetchHotlines, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   const filteredHotlines = hotlines.filter(h => {
@@ -99,13 +86,13 @@ export default function EmergencyHotlines() {
       coverage: formData.coverage || 'Citywide'
     };
 
-    const { error } = await supabase.from('emergency_hotlines').insert([payload]);
-    if (error) {
-      alert('Error adding hotline: ' + error.message);
-    } else {
+    try {
+      await apiClient.createHotline(payload);
       fetchHotlines();
       setIsDrawerOpen(false);
       setFormData({ agency: '', category: '', primaryNumber: '', alternativeNumber: '', email: '', availability: '', coverage: '' });
+    } catch (err) {
+      alert('Error adding hotline: ' + err.message);
     }
   };
 

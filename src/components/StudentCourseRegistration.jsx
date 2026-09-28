@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, CheckCircle, Clock, BookOpen, AlertCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 import { apiClient } from '../apiClient';
 
 export default function StudentCourseRegistration({ session }) {
@@ -19,37 +18,10 @@ export default function StudentCourseRegistration({ session }) {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Try MySQL API
-      try {
-        const mysqlCourses = await apiClient.getCourses();
-        const mysqlEnrollments = await apiClient.getEnrollments(defaultStudentNumber);
-        if (mysqlCourses && Array.isArray(mysqlCourses)) {
-          setCourses(mysqlCourses);
-          setEnrolledCourseCodes((mysqlEnrollments || []).map(e => e.course_code));
-          setLoading(false);
-          return;
-        }
-      } catch (mErr) {
-        console.warn('MySQL catalog fetch notice:', mErr.message);
-      }
-
-      // 2. Supabase fallback
-      const { data: courseData, error: courseErr } = await supabase
-        .from('courses')
-        .select('*')
-        .order('course_code', { ascending: true });
-
-      if (courseErr) throw courseErr;
-      setCourses(courseData || []);
-
-      const { data: enrollData, error: enrollErr } = await supabase
-        .from('enrollments')
-        .select('course_code')
-        .eq('student_number', defaultStudentNumber);
-
-      if (!enrollErr && enrollData) {
-        setEnrolledCourseCodes(enrollData.map(e => e.course_code));
-      }
+      const mysqlCourses = await apiClient.getCourses();
+      const mysqlEnrollments = await apiClient.getEnrollments(defaultStudentNumber);
+      setCourses(Array.isArray(mysqlCourses) ? mysqlCourses : []);
+      setEnrolledCourseCodes((mysqlEnrollments || []).map(e => e.course_code));
     } catch (err) {
       console.error('Fetch error:', err);
       setErrorMsg(err.message || 'Error loading courses database.');
@@ -79,18 +51,7 @@ export default function StudentCourseRegistration({ session }) {
         return;
       }
 
-      // Insert enrollment record
-      const { error: insertErr } = await supabase
-        .from('enrollments')
-        .insert([{ student_number: defaultStudentNumber, course_code: course.course_code, status: 'Confirmed' }]);
-
-      if (insertErr) throw insertErr;
-
-      // Update seat count
-      await supabase
-        .from('courses')
-        .update({ enrolled_seats: course.enrolled_seats + 1 })
-        .eq('course_code', course.course_code);
+      await apiClient.enrollCourse(defaultStudentNumber, course.course_code);
 
       setEnrolledCourseCodes([...enrolledCourseCodes, course.course_code]);
       setNotification(`Successfully enrolled in ${course.course_code}: ${course.title}!`);

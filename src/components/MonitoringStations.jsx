@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { apiClient } from '../apiClient';
 import { calculateAlertStatus } from '../utils/waterLevelUtils';
+
+const POLL_INTERVAL_MS = 15000;
 import {  
   RefreshCw, 
   Droplet, 
@@ -39,18 +41,12 @@ export default function MonitoringStations() {
   const [showSummary, setShowSummary] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 
-  // Fetch stations from Supabase table 'monitoring_stations'
-  const fetchStationsFromSupabase = async () => {
+  // Fetch stations from the monitoring_stations table via the API
+  const fetchStations = async () => {
     setIsRefreshing(true);
     try {
-      const { data, error } = await supabase
-        .from('monitoring_stations')
-        .select('*')
-        .order('level', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching monitoring stations from Supabase:', error.message);
-      } else if (data && data.length > 0) {
+      const data = await apiClient.getMonitoringStations('level');
+      if (data && data.length > 0) {
         // Calculate status dynamically using calculateAlertStatus
         const formattedStations = data.map((item, idx) => {
           const level = Number(item.level);
@@ -85,25 +81,15 @@ export default function MonitoringStations() {
   };
 
   useEffect(() => {
-    fetchStationsFromSupabase();
-
-    // Subscribe to real-time changes on the 'monitoring_stations' table
-    const channel = supabase
-      .channel('monitoring-stations-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'monitoring_stations' }, () => {
-        fetchStationsFromSupabase();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    fetchStations();
+    const intervalId = setInterval(fetchStations, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await fetchStationsFromSupabase();
+      await fetchStations();
     } finally {
       // Ensure minimum spinning animation duration so user gets immediate visual feedback
       setTimeout(() => setIsRefreshing(false), 500);

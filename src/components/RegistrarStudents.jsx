@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, AlertCircle } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 import { apiClient } from '../apiClient';
 
 export default function RegistrarStudents() {
@@ -9,50 +8,16 @@ export default function RegistrarStudents() {
   const [search, setSearch] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fetch students from MySQL or Supabase
+  // Fetch students from the API (MySQL-backed)
   const fetchStudents = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Try MySQL API
-      try {
-        const mysqlStudents = await apiClient.getStudents();
-        if (mysqlStudents && Array.isArray(mysqlStudents)) {
-          setStudents(mysqlStudents);
-          setLoading(false);
-          return;
-        }
-      } catch (mErr) {
-        console.warn('MySQL student fetch notice:', mErr.message);
-      }
-
-      // 2. Supabase Fallback
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        // Seed default sample students if database table is empty
-        const sampleStudents = [
-          { student_number: '2026-0001', full_name: 'Juan Dela Cruz', email: 'juan.delacruz@university.edu.ph', program: 'BS Computer Science', year_level: 3, status: 'Enrolled' },
-          { student_number: '2026-0002', full_name: 'Maria Santos', email: 'maria.santos@university.edu.ph', program: 'BS Information Technology', year_level: 2, status: 'Enrolled' },
-          { student_number: '2026-0003', full_name: 'Alex Bonifacio', email: 'alex.bonifacio@university.edu.ph', program: 'BS Cybersecurity', year_level: 4, status: 'Pending Review' },
-          { student_number: '2026-0004', full_name: 'Rizalina Mercado', email: 'rizal.mercado@university.edu.ph', program: 'BS Computer Engineering', year_level: 1, status: 'Enrolled' }
-        ];
-
-        const { data: seeded, error: seedErr } = await supabase.from('students').insert(sampleStudents).select();
-        if (!seedErr && seeded) {
-          setStudents(seeded);
-        }
-      } else {
-        setStudents(data);
-      }
+      const data = await apiClient.getStudents();
+      setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Students fetch error:', err);
-      setErrorMsg(err.message || 'Could not fetch students from Supabase database.');
+      setErrorMsg(err.message || 'Could not fetch students.');
     } finally {
       setLoading(false);
     }

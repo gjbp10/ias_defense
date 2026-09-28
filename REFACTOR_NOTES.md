@@ -41,7 +41,7 @@ test log in the conversation for the exact requests/responses.
    npm run dev
    ```
    Set `VITE_API_URL` (see `.env.frontend.example`) if the API isn't at
-   `http://localhost:5000/api`.
+   `http://localhost:8080/api`.
 
 ## Deploying
 
