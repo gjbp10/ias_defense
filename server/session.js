@@ -1,8 +1,10 @@
 import session from 'express-session';
 import MySQLStoreFactory from 'express-mysql-session';
 import { pool } from './db.js';
+import { isProduction, readSecret } from './config.js';
 
 const MySQLStore = MySQLStoreFactory(session);
+const sessionSecret = readSecret('SESSION_SECRET');
 
 // Sessions live in MySQL (the `sessions` table -- see ias_defense_db.sql)
 // instead of in-memory, so logins survive a server restart and work
@@ -23,8 +25,6 @@ export const sessionStore = new MySQLStore(
   pool
 );
 
-const isProduction = process.env.NODE_ENV === 'production';
-
 // NOTE on cross-origin cookies: the frontend (Vercel) and this API (Railway)
 // are different origins, so the session cookie must be SameSite=None; Secure
 // in production for the browser to send it at all. That also means
@@ -33,7 +33,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 // not a redundant one. See the refactor plan for why this matters.
 export const sessionMiddleware = session({
   name: 'aucres.sid',
-  secret: process.env.SESSION_SECRET || 'dev-session-secret-change-me',
+  secret: sessionSecret,
   store: sessionStore,
   resave: false,
   // true so an anonymous session (and its id) exists as soon as the app

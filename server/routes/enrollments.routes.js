@@ -1,13 +1,12 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { doubleCsrfProtection } from '../middleware/csrf.js';
 
 const router = express.Router();
 
 router.get('/:studentNumber', requireAuth, async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const [rows] = await pool.execute(
       `SELECT c.* FROM enrollments e
        JOIN courses c ON e.course_code = c.course_code
        WHERE e.student_number = ?`,
@@ -19,17 +18,17 @@ router.get('/:studentNumber', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, doubleCsrfProtection, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const { student_number, course_code } = req.body || {};
   if (!student_number || !course_code) {
     return res.status(400).json({ error: 'student_number and course_code are required.' });
   }
   try {
-    await pool.query(
+    await pool.execute(
       'INSERT INTO enrollments (student_number, course_code) VALUES (?, ?)',
       [student_number, course_code]
     );
-    await pool.query(
+    await pool.execute(
       'UPDATE courses SET enrolled_seats = enrolled_seats + 1 WHERE course_code = ?',
       [course_code]
     );
@@ -43,17 +42,17 @@ router.post('/', requireAuth, doubleCsrfProtection, async (req, res) => {
 // the frontend, but server.js had no matching route, so StudentRecords.jsx
 // was calling Supabase directly to drop a course instead. Added here, and
 // it now also decrements enrolled_seats (the old Supabase path didn't).
-router.delete('/', requireAuth, doubleCsrfProtection, async (req, res) => {
+router.delete('/', requireAuth, async (req, res) => {
   const { student_number, course_code } = req.body || {};
   if (!student_number || !course_code) {
     return res.status(400).json({ error: 'student_number and course_code are required.' });
   }
   try {
-    await pool.query(
+    await pool.execute(
       'DELETE FROM enrollments WHERE student_number = ? AND course_code = ?',
       [student_number, course_code]
     );
-    await pool.query(
+    await pool.execute(
       'UPDATE courses SET enrolled_seats = GREATEST(enrolled_seats - 1, 0) WHERE course_code = ?',
       [course_code]
     );

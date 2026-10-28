@@ -1,6 +1,7 @@
 import { doubleCsrf } from 'csrf-csrf';
+import { isProduction, readSecret } from '../config.js';
 
-const isProduction = process.env.NODE_ENV === 'production';
+const csrfSecret = readSecret('CSRF_SECRET');
 
 // Double-submit-cookie CSRF protection, bound to the session id.
 // Frontend flow: GET /api/auth/csrf-token once -> send the returned token
@@ -13,7 +14,7 @@ export const {
   doubleCsrfProtection,
   invalidCsrfTokenError,
 } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'dev-csrf-secret-change-me',
+  getSecret: () => csrfSecret,
   getSessionIdentifier: (req) => req.session.id,
   cookieName: isProduction ? '__Host-aucres.csrf-token' : 'aucres.csrf-token',
   cookieOptions: {

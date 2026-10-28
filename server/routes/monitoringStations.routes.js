@@ -13,7 +13,7 @@ router.get('/', requireAuth, async (req, res) => {
   const orderColumn = req.query.orderBy === 'station_name' ? 'station_name' : 'level';
   const direction = req.query.orderBy === 'station_name' ? 'ASC' : 'DESC';
   try {
-    const [rows] = await pool.query(`SELECT * FROM monitoring_stations ORDER BY ${orderColumn} ${direction}`);
+    const [rows] = await pool.execute(`SELECT * FROM monitoring_stations ORDER BY ${orderColumn} ${direction}`);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

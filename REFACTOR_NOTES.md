@@ -59,6 +59,28 @@ test log in the conversation for the exact requests/responses.
   than one), and `NODE_ENV=production` — this switches cookies to
   `Secure; SameSite=None`, which cross-origin cookies need to work at all.
 
+## Additional hardening (2026-10-28)
+
+- Account password checks and failed-attempt updates now share a transaction
+  and `SELECT ... FOR UPDATE` lock. Five failures lock the account for five
+  minutes, including concurrent guesses and guesses through other server
+  instances. This requires the `users` table to use InnoDB and all instances
+  to share the same database. The existing per-IP limiter remains in memory.
+- API and audit queries use MySQL2 `execute()` with bound values. Dynamic
+  columns still come only from fixed allowlists; multiple statements are disabled.
+- CSRF validation runs before every API write. Tokens remain signed and bound
+  to the session, and the token endpoint disables response caching.
+- Environment configuration loads before security modules. Production refuses
+  missing or shorter-than-32-byte `CSRF_SECRET` and `SESSION_SECRET` values;
+  generate separate random values using the command above. Development uses
+  temporary random secrets when these values are absent.
+
+Verification for this additional pass: `node --test tests/security.test.js`
+passed 12 unit checks, and `npm run build` passed. Server syntax checks passed;
+targeted lint reported one existing unused-parameter warning. The concurrency
+checks use a database double, so live MySQL, browser and deployment behavior
+have not been verified by this pass. No database migration was run.
+
 ## Known follow-up (not part of this security pass)
 
 Student-facing screens (`StudentCourseRegistration.jsx`, `StudentRecords.jsx`)

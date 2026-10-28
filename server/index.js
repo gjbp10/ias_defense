@@ -4,11 +4,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 
 import { pool } from './db.js';
 import { sessionMiddleware } from './session.js';
-import { invalidCsrfTokenError } from './middleware/csrf.js';
+import { doubleCsrfProtection, invalidCsrfTokenError } from './middleware/csrf.js';
 
 import authRoutes from './routes/auth.routes.js';
 import studentsRoutes from './routes/students.routes.js';
@@ -18,8 +17,6 @@ import advisoriesRoutes from './routes/advisories.routes.js';
 import hotlinesRoutes from './routes/hotlines.routes.js';
 import monitoringStationsRoutes from './routes/monitoringStations.routes.js';
 import communityReportsRoutes from './routes/communityReports.routes.js';
-
-dotenv.config();
 
 const app = express();
 
@@ -43,10 +40,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use(sessionMiddleware);
+// Protect every API write, including future routes; GET/HEAD/OPTIONS are exempt.
+app.use('/api', doubleCsrfProtection);
 
 app.get('/api/health', async (req, res) => {
   try {
-    await pool.query('SELECT 1 + 1 AS result');
+    await pool.execute('SELECT 1 + 1 AS result');
     res.json({ status: 'connected', db: process.env.DB_NAME });
   } catch (error) {
     res.status(500).json({ error: error.message });

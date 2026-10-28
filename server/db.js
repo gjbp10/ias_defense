@@ -1,8 +1,9 @@
 import mysql from 'mysql2/promise';
+import './config.js';
 
 // Central connection pool. Every query in every route file goes through
-// this pool using parameterized ("?") placeholders -- never string-built
-// SQL -- which is what keeps this app safe from SQL injection.
+// this pool using execute() and bound values. Dynamic SQL identifiers must
+// come only from fixed application allowlists, never from request values.
 export const pool = mysql.createPool({
   host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
   user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
@@ -12,5 +13,6 @@ export const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  multipleStatements: false,
 });
 
